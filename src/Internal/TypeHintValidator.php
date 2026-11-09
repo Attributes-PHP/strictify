@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation\Internal;
+namespace Attributes\Strictify\Internal;
 
-use Attributes\Validation\BaseModel;
+use Attributes\Strictify\BaseModel;
 use ReflectionClass;
 use ReflectionIntersectionType;
 use ReflectionProperty;

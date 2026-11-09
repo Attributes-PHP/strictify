@@ -1,19 +1,19 @@
-# Attributes Validation
+# Attributes Strictify
 
 <p align="center">
-    <a href="https://codecov.io/gh/Attributes-PHP/validation"><img src="https://codecov.io/gh/Attributes-PHP/validation/graph/badge.svg?token=9W2JHIDQ2V"/></a>
-    <a href="https://packagist.org/packages/Attributes-PHP/validation"><img alt="Latest Version" src="https://img.shields.io/packagist/v/Attributes-PHP/validation"></a>
-    <a href="https://packagist.org/packages/Attributes-PHP/validation"><img alt="Software License" src="https://img.shields.io/packagist/l/Attributes-PHP/validation"></a>
+    <a href="https://codecov.io/gh/Attributes-PHP/strictify"><img src="https://codecov.io/gh/Attributes-PHP/strictify/graph/badge.svg?token=9W2JHIDQ2V"/></a>
+    <a href="https://packagist.org/packages/Attributes-PHP/strictify"><img alt="Latest Version" src="https://img.shields.io/packagist/v/Attributes-PHP/strictify"></a>
+    <a href="https://packagist.org/packages/Attributes-PHP/strictify"><img alt="Software License" src="https://img.shields.io/packagist/l/Attributes-PHP/strictify"></a>
 </p>
 
-**Attributes Validation** is a Pydantic-inspired PHP library for validating data via type hints. Your model types are the
+**Attributes Strictify** is a Pydantic-inspired PHP library for validating data via type hints. Your model types are the
 schema: no configuration files, no YAML.
 
 ```php
 <?php
 
-use function Attributes\Validation\validate;
-use Attributes\Validation\BaseModel;
+use function Attributes\Strictify\validate;
+use Attributes\Strictify\BaseModel;
 
 class User extends BaseModel
 {
@@ -51,7 +51,7 @@ var_dump($user->birthday); // object(DateTime) "1994-01-01 09:00:00.000000" (+00
 ## Installation
 
 ```bash
-composer require attributes-php/validation
+composer require attributes-php/strictify
 ```
 
 ## Usage
@@ -59,12 +59,12 @@ composer require attributes-php/validation
 ```php
 <?php
 
-use function Attributes\Validation\call;
-use function Attributes\Validation\validate;
-use Attributes\Validation\BaseModel;
-use Attributes\Validation\Fields\Sequence;
-use Attributes\Validation\ModelConfigs;
-use Attributes\Validation\Type;
+use function Attributes\Strictify\call;
+use function Attributes\Strictify\validate;
+use Attributes\Strictify\BaseModel;
+use Attributes\Strictify\Fields\Sequence;
+use Attributes\Strictify\ModelConfigs;
+use Attributes\Strictify\Type;
 
 #[ModelConfigs(strict: false)]
 class Blog extends BaseModel
@@ -87,10 +87,10 @@ $blog = validate([
 $result = call('registerBlog', $rawData, $dependencies);
 ```
 
-Validation failures throw `Attributes\Validation\Exceptions\ValidationException` with the error list keyed by field path:
+Validation failures throw `Attributes\Strictify\Exceptions\ValidationException` with the error list keyed by field path:
 
 ```php
-use Attributes\Validation\Exceptions\ValidationException;
+use Attributes\Strictify\Exceptions\ValidationException;
 
 try {
     validate($rawData, new Blog());
@@ -103,4 +103,4 @@ try {
 }
 ```
 
-Attributes Validation was created by **[André Gil](https://www.linkedin.com/in/andre-gil/)** and is open-sourced software licensed under the **[MIT license](https://opensource.org/licenses/MIT)**.
+Attributes Strictify was created by **[André Gil](https://www.linkedin.com/in/andre-gil/)** and is open-sourced software licensed under the **[MIT license](https://opensource.org/licenses/MIT)**.

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation\Internal;
+namespace Attributes\Strictify\Internal;
 
-use Attributes\Validation\Fields\Alias;
+use Attributes\Strictify\Fields\Alias;
 use ReflectionProperty;
 
 /**
@@ -25,7 +25,7 @@ final class FieldNameResolver
 
             if (! is_string($name)) {
                 throw new \TypeError(sprintf(
-                    'Attributes\Validation\Fields\Alias::__construct(): Argument #1 ($name) must be of type string, %s given',
+                    'Attributes\Strictify\Fields\Alias::__construct(): Argument #1 ($name) must be of type string, %s given',
                     Value::typeName($name)
                 ));
             }

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation\Internal;
+namespace Attributes\Strictify\Internal;
 
-use Attributes\Validation\BaseModel;
-use Attributes\Validation\Exceptions\ValidationException;
+use Attributes\Strictify\BaseModel;
+use Attributes\Strictify\Exceptions\ValidationException;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionProperty;

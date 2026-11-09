@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation;
+namespace Attributes\Strictify;
 
 #[\Attribute(\Attribute::TARGET_CLASS)]
 final class ModelConfigs
@@ -40,7 +40,7 @@ final class ModelConfigs
             $normalized = strtolower($aliasGenerator);
             if (! in_array($normalized, self::ALIAS_GENERATORS, true)) {
                 throw new \ValueError(sprintf(
-                    'Attributes\Validation\ModelConfigs::__construct(): Argument #1 must be of one of the following options: %s',
+                    'Attributes\Strictify\ModelConfigs::__construct(): Argument #1 must be of one of the following options: %s',
                     implode(', ', self::ALIAS_GENERATORS)
                 ));
             }
@@ -50,7 +50,7 @@ final class ModelConfigs
 
         if (! in_array(strtolower($extra), self::EXTRAS, true)) {
             throw new \ValueError(sprintf(
-                'Attributes\Validation\ModelConfigs::__construct(): Argument #5 must be of one of the following options: %s',
+                'Attributes\Strictify\ModelConfigs::__construct(): Argument #5 must be of one of the following options: %s',
                 implode(', ', self::EXTRAS)
             ));
         }
@@ -101,7 +101,7 @@ final class ModelConfigs
     public static function setDefaultErrorMessages(mixed $setErrorMessages): void
     {
         if (! is_callable($setErrorMessages)) {
-            throw new \TypeError('Argument 1 passed to Attributes\Validation\ModelConfigs::setDefaultErrorMessages() must be callable');
+            throw new \TypeError('Argument 1 passed to Attributes\Strictify\ModelConfigs::setDefaultErrorMessages() must be callable');
         }
 
         self::$defaultErrorMessages = $setErrorMessages;

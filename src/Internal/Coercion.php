@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation\Internal;
+namespace Attributes\Strictify\Internal;
 
 /**
  * Loose-mode scalar coercion, mirroring the engine's weak type rules.

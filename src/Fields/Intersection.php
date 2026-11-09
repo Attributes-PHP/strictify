@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation\Fields;
+namespace Attributes\Strictify\Fields;
 
-use Attributes\Validation\Internal\Value;
+use Attributes\Strictify\Internal\Value;
 
 #[\Attribute(\Attribute::TARGET_PROPERTY | \Attribute::TARGET_PARAMETER)]
 final class Intersection implements Field

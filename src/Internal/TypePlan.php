@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation\Internal;
+namespace Attributes\Strictify\Internal;
 
 /**
  * A property type hint compiled once: the combined basic mask of its

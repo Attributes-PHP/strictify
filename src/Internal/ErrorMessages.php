@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation\Internal;
+namespace Attributes\Strictify\Internal;
 
-use Attributes\Validation\Fields\ErrorMessage;
+use Attributes\Strictify\Fields\ErrorMessage;
 use ReflectionNamedType;
 use ReflectionProperty;
 use ReflectionType;
@@ -238,7 +238,7 @@ final class ErrorMessages
             }
 
             if ($value !== null) {
-                throw new \ValueError('Only string arguments are valid for Attributes\Validation\Fields\ErrorMessage::construct(...)');
+                throw new \ValueError('Only string arguments are valid for Attributes\Strictify\Fields\ErrorMessage::construct(...)');
             }
 
             break;

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation\Fields;
+namespace Attributes\Strictify\Fields;
 
-use Attributes\Validation\Internal\Value;
-use Attributes\Validation\Type;
+use Attributes\Strictify\Internal\Value;
+use Attributes\Strictify\Type;
 
 #[\Attribute(\Attribute::TARGET_PROPERTY | \Attribute::TARGET_PARAMETER)]
 final class Union implements Field
@@ -20,7 +20,7 @@ final class Union implements Field
             if (! (is_int($arm) || is_string($arm) || $arm instanceof Type
                 || $arm instanceof Sequence || $arm instanceof Union || $arm instanceof Intersection || $arm instanceof Dict)) {
                 throw new \TypeError(sprintf(
-                    'Union::__construct(): Argument #%d must be of type int|string|\Attributes\Validation\Type|Sequence|Union|Intersection|Dict, %s given',
+                    'Union::__construct(): Argument #%d must be of type int|string|\Attributes\Strictify\Type|Sequence|Union|Intersection|Dict, %s given',
                     $index + 1,
                     Value::typeName($arm)
                 ));

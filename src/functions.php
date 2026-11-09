@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation;
+namespace Attributes\Strictify;
 
 use ArrayAccess;
-use Attributes\Validation\Internal\Hydrator;
+use Attributes\Strictify\Internal\Hydrator;
 
 /**
  * Validates a raw data array against the type hints and attributes of a
@@ -28,7 +28,7 @@ function call(string|callable $function, array $params, mixed $dependencies = []
 {
     if (! is_array($dependencies) && ! $dependencies instanceof ArrayAccess) {
         throw new \TypeError(sprintf(
-            'Attributes\Validation\call(): Argument #3 ($dependencies) must be of type array|ArrayAccess, %s given',
+            'Attributes\Strictify\call(): Argument #3 ($dependencies) must be of type array|ArrayAccess, %s given',
             Internal\Value::typeName($dependencies)
         ));
     }

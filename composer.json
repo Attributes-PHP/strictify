@@ -1,9 +1,9 @@
 {
-    "name": "attributes-php/validation",
+    "name": "attributes-php/strictify",
     "type": "library",
     "description": "Pydantic-inspired PHP library for validating data via type hints at lightning speed",
     "keywords": [
-        "validation",
+        "strictify",
         "fast",
         "attributes"
     ],
@@ -13,7 +13,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Attributes\\Validation\\": "src/"
+            "Attributes\\Strictify\\": "src/"
         },
         "files": [
             "src/constants.php",
@@ -22,8 +22,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Attributes\\Validation\\Tests\\": "tests/Integration/",
-            "Attributes\\Validation\\Tests\\Benchmark\\": "tests/Benchmark/"
+            "Attributes\\Strictify\\Tests\\": "tests/Integration/",
+            "Attributes\\Strictify\\Tests\\Benchmark\\": "tests/Benchmark/"
         },
         "classmap": [
             "tests/Integration/Models/"

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation\Internal;
+namespace Attributes\Strictify\Internal;
 
 use ArrayAccess;
-use Attributes\Validation\BaseModel;
+use Attributes\Strictify\BaseModel;
 use ReflectionClass;
 use ReflectionFunction;
 use ReflectionFunctionAbstract;

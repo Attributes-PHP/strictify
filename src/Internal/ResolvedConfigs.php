@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation\Internal;
+namespace Attributes\Strictify\Internal;
 
-use Attributes\Validation\ModelConfigs;
+use Attributes\Strictify\ModelConfigs;
 
 /**
  * The ModelConfigs of a model class, resolved from its class attribute.
@@ -64,7 +64,7 @@ final class ResolvedConfigs
                     case 0: // aliasGenerator
                         if (is_string($value)) {
                             if (! in_array(strtolower($value), ['pascal', 'camel', 'snake', 'kebab'], true)) {
-                                throw new \ValueError('Attributes\Validation\ModelConfigs::__construct(): Argument #1 must be of one of the following options: pascal, camel, snake, kebab');
+                                throw new \ValueError('Attributes\Strictify\ModelConfigs::__construct(): Argument #1 must be of one of the following options: pascal, camel, snake, kebab');
                             }
 
                             $generator = strtolower($value);
@@ -86,7 +86,7 @@ final class ResolvedConfigs
                     case 4: // extra
                         if (is_string($value)) {
                             if (! in_array(strtolower($value), ['ignore', 'forbid', 'allow'], true)) {
-                                throw new \ValueError('Attributes\Validation\ModelConfigs::__construct(): Argument #5 must be of one of the following options: ignore, forbid, allow');
+                                throw new \ValueError('Attributes\Strictify\ModelConfigs::__construct(): Argument #5 must be of one of the following options: ignore, forbid, allow');
                             }
 
                             $extra = strtolower($value);

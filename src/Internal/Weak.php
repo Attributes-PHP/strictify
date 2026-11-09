@@ -8,7 +8,7 @@
  * deprecations for fractional values.
  */
 
-namespace Attributes\Validation\Internal;
+namespace Attributes\Strictify\Internal;
 
 /**
  * Weak scalar conversion helpers.

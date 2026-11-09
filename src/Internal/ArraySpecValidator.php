@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation\Internal;
+namespace Attributes\Strictify\Internal;
 
-use Attributes\Validation\BaseModel;
-use Attributes\Validation\Fields\Dict;
-use Attributes\Validation\Fields\Intersection;
-use Attributes\Validation\Fields\Sequence;
-use Attributes\Validation\Fields\Union;
-use Attributes\Validation\Type;
+use Attributes\Strictify\BaseModel;
+use Attributes\Strictify\Fields\Dict;
+use Attributes\Strictify\Fields\Intersection;
+use Attributes\Strictify\Fields\Sequence;
+use Attributes\Strictify\Fields\Union;
+use Attributes\Strictify\Type;
 use ReflectionAttribute;
 use ReflectionProperty;
 
@@ -28,10 +28,10 @@ final class ArraySpecValidator
     private const ATTRIBUTE_CLASSES = [Sequence::class, Union::class, Intersection::class, Dict::class];
 
     private const REFERENCE_NAMES = [
-        'attributes\validation\fields\sequence' => Sequence::class,
-        'attributes\validation\fields\union' => Union::class,
-        'attributes\validation\fields\intersection' => Intersection::class,
-        'attributes\validation\fields\dict' => Dict::class,
+        'attributes\strictify\fields\sequence' => Sequence::class,
+        'attributes\strictify\fields\union' => Union::class,
+        'attributes\strictify\fields\intersection' => Intersection::class,
+        'attributes\strictify\fields\dict' => Dict::class,
     ];
 
     private static array $specCache = [];
@@ -529,7 +529,7 @@ final class ArraySpecValidator
             if (! $armValue instanceof Sequence && ! $armValue instanceof Union
                 && ! $armValue instanceof Intersection && ! $armValue instanceof Dict) {
                 throw new \ValueError(sprintf(
-                    'Unsupported type "%s" in an Attributes\Validation array type attribute.',
+                    'Unsupported type "%s" in an Attributes\Strictify array type attribute.',
                     $armValue::class
                 ));
             }
@@ -557,7 +557,7 @@ final class ArraySpecValidator
             return new Arm(classString: $armValue, class: $class);
         }
 
-        throw new \ValueError('Unsupported type in an Attributes\Validation array type attribute.');
+        throw new \ValueError('Unsupported type in an Attributes\Strictify array type attribute.');
     }
 
     /**
@@ -568,7 +568,7 @@ final class ArraySpecValidator
     {
         if ($typeValue <= 0 || ($typeValue & ~Masks::ALL_BITS) !== 0) {
             throw new \ValueError(sprintf(
-                'Unsupported type value %d in an Attributes\Validation array type attribute.',
+                'Unsupported type value %d in an Attributes\Strictify array type attribute.',
                 $typeValue
             ));
         }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation\Internal;
+namespace Attributes\Strictify\Internal;
 
 /**
  * A resolved Sequence, Union, Intersection or Dict attribute: the arms of

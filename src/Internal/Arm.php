@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation\Internal;
+namespace Attributes\Strictify\Internal;
 
 /**
  * One arm of an array type-hint attribute spec: a basic type mask, a

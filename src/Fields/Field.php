@@ -2,6 +2,6 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation\Fields;
+namespace Attributes\Strictify\Fields;
 
 interface Field {}

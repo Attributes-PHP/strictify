@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation;
+namespace Attributes\Strictify;
 
 abstract class BaseModel
 {

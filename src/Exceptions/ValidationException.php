@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Attributes\Validation\Exceptions;
+namespace Attributes\Strictify\Exceptions;
 
 class ValidationException extends BaseException
 {
