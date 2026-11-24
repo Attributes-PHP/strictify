@@ -1,19 +1,14 @@
 # Strictify
 
-# Attributes Strictify
-
 <p align="center">
     <a href="https://codecov.io/gh/Attributes-PHP/strictify"><img src="https://codecov.io/gh/Attributes-PHP/strictify/graph/badge.svg?token=9W2JHIDQ2V"/></a>
     <a href="https://packagist.org/packages/Attributes-PHP/strictify"><img alt="Latest Version" src="https://img.shields.io/packagist/v/Attributes-PHP/strictify"></a>
     <a href="https://packagist.org/packages/Attributes-PHP/strictify"><img alt="Software License" src="https://img.shields.io/packagist/l/Attributes-PHP/strictify"></a>
 </p>
 
-**Attributes Strictify** is a Pydantic-inspired PHP library for validating data via type hints. Your model types are the
-schema: no configuration files, no YAML.
-
 ------
 
-**Strictify** is a Pydantic-inspired PHP library for validating data via type hints at lightning speed ⚡️
+**Strictify** is a PHP library for validating data via type hints. Your model types are the schema: no configuration files, no YAML.
 
 ## Prerequisites
 
