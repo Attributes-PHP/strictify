@@ -24,14 +24,7 @@ function validate(array $rawData, BaseModel $model): BaseModel
  * and every other parameter is injected from a dependencies array or
  * ArrayAccess container.
  */
-function call(string|callable $function, array $params, mixed $dependencies = []): mixed
+function call(string|callable $function, array $params, array|ArrayAccess $dependencies = []): mixed
 {
-    if (! is_array($dependencies) && ! $dependencies instanceof ArrayAccess) {
-        throw new \TypeError(sprintf(
-            'Attributes\Strictify\call(): Argument #3 ($dependencies) must be of type array|ArrayAccess, %s given',
-            Internal\Value::typeName($dependencies)
-        ));
-    }
-
     return Internal\Caller::call($function, $params, $dependencies);
 }

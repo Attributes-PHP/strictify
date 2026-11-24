@@ -14,11 +14,13 @@ final class Dict implements Field
 
     public mixed $of;
 
-    public function __construct(mixed $key, mixed $of)
+    public bool $uniqueValues;
+
+    public function __construct(mixed $key, mixed $of, bool $uniqueValues = false)
     {
         if (! (is_int($key) || $key instanceof Type || $key instanceof Union)) {
             throw new \TypeError(sprintf(
-                'Dict::__construct(): Argument #1 ($key) must be of type int|\Attributes\Strictify\Type|Union, %s given',
+                'Dict::__construct(): Argument #1 ($key) must be of type int|\\Attributes\\Strictify\\Type|Union, %s given',
                 Value::typeName($key)
             ));
         }
@@ -26,7 +28,7 @@ final class Dict implements Field
         if (! (is_int($of) || is_string($of) || $of instanceof Type
             || $of instanceof Union || $of instanceof Intersection || $of instanceof Sequence || $of instanceof Dict)) {
             throw new \TypeError(sprintf(
-                'Dict::__construct(): Argument #2 ($of) must be of type int|string|\Attributes\Strictify\Type|Union|Intersection|Sequence|Dict, %s given',
+                'Dict::__construct(): Argument #2 ($of) must be of type int|string|\\Attributes\\Strictify\\Type|Union|Intersection|Sequence|Dict, %s given',
                 Value::typeName($of)
             ));
         }
@@ -40,5 +42,6 @@ final class Dict implements Field
 
         $this->key = $key;
         $this->of = $of;
+        $this->uniqueValues = $uniqueValues;
     }
 }

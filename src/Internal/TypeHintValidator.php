@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Attributes\Strictify\Internal;
 
 use Attributes\Strictify\BaseModel;
+use Attributes\Strictify\Fields\Dict;
+use Attributes\Strictify\Fields\Sequence;
 use ReflectionClass;
 use ReflectionIntersectionType;
 use ReflectionProperty;
@@ -51,6 +53,22 @@ final class TypeHintValidator
         $plan ??= self::plan($property);
 
         if ($plan->untyped) {
+            // No native hint to check, but the array type-hint attributes
+            // still apply when the value is an array
+            if (is_array($value)) {
+                $ok = ArraySpecValidator::validateArray($value, $property, $configs, $errors, $parentPath, $fieldName);
+
+                return ['ok' => $ok, 'value' => $value];
+            }
+
+            if (self::hasArrayAttribute($property)) {
+                // Sequence/Dict on an untyped property: a non-array value
+                // cannot satisfy them
+                ErrorMessages::addFieldError(ErrorMessages::TYPE, $parentPath, $fieldName, $property, $value, $errors, 'array');
+
+                return ['ok' => false, 'value' => $value];
+            }
+
             return ['ok' => true, 'value' => $value];
         }
 
@@ -65,6 +83,15 @@ final class TypeHintValidator
                 $ok = ArraySpecValidator::validateArray($value, $property, $configs, $errors, $parentPath, $fieldName);
 
                 return ['ok' => $ok, 'value' => $value];
+            }
+
+            if ($plan->mixed && self::hasArrayAttribute($property)) {
+                // mixed with #[Sequence(...)] and a non-array value: the
+                // hint accepts anything, so the attribute would silently
+                // never apply — report it instead
+                ErrorMessages::addFieldError(ErrorMessages::TYPE, $parentPath, $fieldName, $property, $value, $errors, 'array');
+
+                return ['ok' => false, 'value' => $value];
             }
 
             return ['ok' => true, 'value' => $value];
@@ -105,7 +132,7 @@ final class TypeHintValidator
         }
 
         foreach ($plan->classes as $arm) {
-            $handled = self::handleClass($value, $arm, $configs, $errors, $parentPath, $fieldName);
+            $handled = self::handleClass($value, $arm, $configs, $errors, $parentPath, $fieldName, $property);
 
             if ($handled !== null) {
                 return ['ok' => true, 'value' => $handled];
@@ -117,6 +144,16 @@ final class TypeHintValidator
         }
 
         return ['ok' => false, 'value' => $value];
+    }
+
+    /**
+     * Whether the property declares a Sequence or Dict attribute (the
+     * attributes that force array values even on untyped/mixed hints).
+     */
+    public static function hasArrayAttribute(ReflectionProperty $property): bool
+    {
+        return $property->getAttributes(Sequence::class) !== []
+            || $property->getAttributes(Dict::class) !== [];
     }
 
     /**
@@ -135,11 +172,28 @@ final class TypeHintValidator
         array &$errors,
         ?string $parentPath,
         string $fieldName,
+        ?ReflectionProperty $property = null,
     ): mixed {
         $arm = is_string($arm) ? self::classFlags($arm) : $arm;
 
-        if ($arm['dateTime'] && is_string($value) && strlen($value) > 12) {
-            $datetime = date_create_from_format('X-m-d\TH:i:sP', $value);
+        if ($arm['dateTime'] && is_string($value)) {
+            // A #[DateTime(format: ..., timezone: ...)] constraint on the
+            // property overrides the default parse format and timezone
+            $format = 'X-m-d\\TH:i:sP';
+            $timezone = null;
+
+            if ($property !== null) {
+                $dateTime = Constraints::dateTimeOf($property);
+
+                if ($dateTime !== null) {
+                    $format = $dateTime->format;
+                    $timezone = $dateTime->getTimezoneObj();
+                }
+            }
+
+            $datetime = $timezone === null
+                ? date_create_from_format($format, $value)
+                : date_create_from_format($format, $value, $timezone);
 
             if ($datetime !== false) {
                 return $datetime;
@@ -156,7 +210,7 @@ final class TypeHintValidator
             $model = (new ReflectionClass($class))->newInstanceWithoutConstructor();
             $nestedPath = ($parentPath === null || $parentPath === '') ? $fieldName : $parentPath.'.'.$fieldName;
 
-            if (Hydrator::validateModel($value, $model, $configs, $errors, $nestedPath)) {
+            if (Hydrator::validateModel($value, $model, ResolvedConfigs::resolve($class), $errors, $nestedPath)) {
                 return $model;
             }
         }
@@ -185,11 +239,16 @@ final class TypeHintValidator
             return self::$planCache[$cacheKey] = $plan;
         }
 
+        $plan->nullable = $type->allowsNull();
+        $plan->isUnion = $type instanceof ReflectionUnionType;
+
         $singleNamed = null;
         $arms = $type instanceof ReflectionUnionType ? $type->getTypes() : [$type];
 
         foreach ($arms as $arm) {
             if ($arm instanceof ReflectionIntersectionType) {
+                $plan->hasDnfArm = $plan->isUnion;
+
                 $members = [];
 
                 foreach ($arm->getTypes() as $member) {
@@ -259,7 +318,7 @@ final class TypeHintValidator
     /**
      * The compiled flags of a class: DateTime-like and BaseModel subclass.
      *
-     * @return array{dateTime: bool, baseModel: bool}
+     * @return array{class: string, dateTime: bool, baseModel: bool}
      */
     private static function classFlags(string $class): array
     {

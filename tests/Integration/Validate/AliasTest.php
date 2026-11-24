@@ -72,4 +72,61 @@ describe('validate function alias attribute handling', function () {
         expect($result->firstName)->toBe('John');
         expect($result->lastName)->toBe('Doe');
     });
+
+    it('nested models support', function () {
+        class Address extends BaseModel
+        {
+            public string $address;
+            public string $postCode;
+        }
+
+        class User extends BaseModel
+        {
+            #[Alias('fullName')]
+            public string $firstAndLastName;
+            public Address $userAddress;
+        }
+
+        $model = new
+            #[ModelConfigs(aliasGenerator: 'snake')]
+            class extends BaseModel {
+                public User $user;
+            };
+
+        validate([
+            'user' => [
+                'fullName' => 'John Brown',
+                'userAddress' => ['address' => '78 Street Road', 'postCode' => 'M00'],
+            ],
+        ], $model);
+        expect($model->user->firstAndLastName)->toBe('John Brown')
+            ->and($model->user->userAddress->address)
+            ->toBe('78 Street Road')
+            ->and($model->user->userAddress->postCode)
+            ->toBe('M00');
+    });
+
+    it('nested models do not inherit the enclosing model aliasGenerator', function () {
+        class PlainAddress extends BaseModel
+        {
+            public string $postCode;
+        }
+
+        $model = new
+            #[ModelConfigs(aliasGenerator: 'snake')]
+            class extends BaseModel {
+                public PlainAddress $addr;
+            };
+
+        // the nested model expects its raw property name, not snake_case
+        $result = validate(['addr' => ['postCode' => 'M00']], $model);
+        expect($result->addr->postCode)->toBe('M00');
+
+        try {
+            validate(['addr' => ['post_code' => 'M00']], $model);
+            expect(false)->toBeTrue('ValidationException expected');
+        } catch (ValidationException $e) {
+            expect($e->getErrors())->toBe(['addr.postCode' => ['Field is required']]);
+        }
+    });
 });

@@ -62,7 +62,7 @@ class CallFunctionHooksUser extends BaseModel
 
     protected function afterValidation(array $rawData, ModelConfigs $configs): void
     {
-        $this->name = $this->name.'-validated';
+        $this->name .= '-validated';
     }
 }
 
@@ -155,6 +155,34 @@ function call_function_takes_service(stdClass $logger): string
     return $logger->name;
 }
 
+class CallFunctionGreeter
+{
+    public static function hello(CallFunctionUser $user): string
+    {
+        return 'static:'.$user->name;
+    }
+
+    public function hi(CallFunctionUser $user): string
+    {
+        return 'method:'.$user->name;
+    }
+}
+
+function call_function_takes_two_models(CallFunctionUser $user, CallFunctionAliasUser $aliasUser): string
+{
+    return $user->name.'/'.$aliasUser->name;
+}
+
+function call_function_dependency_then_model(stdClass $service, CallFunctionUser $user): string
+{
+    return $service->name.'>'.$user->name;
+}
+
+function call_function_throws(): string
+{
+    throw new Error('callable failure');
+}
+
 describe('call function model hydration', function () {
     it('hydrates a model parameter from the params array', function () {
         $result = call('Attributes\Strictify\Tests\Integration\call_function_takes_model', [
@@ -173,10 +201,11 @@ describe('call function model hydration', function () {
 
     it('returns the callable return value', function () {
         $rawData = ['name' => 'Andre', 'age' => 30];
-        expect(call('Attributes\Strictify\Tests\Integration\call_function_returns_model', $rawData))->toEqual(validate(
-            $rawData,
-            new CallFunctionUser,
-        ));
+        expect(call('Attributes\Strictify\Tests\Integration\call_function_returns_model', $rawData))
+            ->toEqual(validate(
+                $rawData,
+                new CallFunctionUser,
+            ));
     });
 
     it('coerces scalars in loose mode like validate', function () {
@@ -356,6 +385,147 @@ describe('call function ArrayAccess dependencies', function () {
         'deps',
     ])->throws(TypeError::class);
 });
+
+describe('call function callable variants', function () {
+    it('accepts a static method string', function () {
+        $result = call(
+            'Attributes\\Strictify\\Tests\\Integration\\CallFunctionGreeter::hello',
+            ['name' => 'Andre', 'age' => 30],
+        );
+        expect($result)->toBe('static:Andre');
+    });
+
+    it('accepts an array callable', function () {
+        $result = call([new CallFunctionGreeter, 'hi'], ['name' => 'Andre', 'age' => 30]);
+        expect($result)->toBe('method:Andre');
+    });
+
+    it('accepts a first-class callable', function () {
+        expect(call(str_repeat(...), [], ['x', 3]))->toBe('xxx');
+    });
+
+    it('throws a TypeError for an unknown function name', function () {
+        call('Attributes\\Strictify\\Tests\\Integration\\does_not_exist', []);
+    })->throws(TypeError::class);
+});
+
+describe('call function argument building', function () {
+    it('hydrates multiple model parameters from the same params array', function () {
+        $result = call(
+            'Attributes\\Strictify\\Tests\\Integration\\call_function_takes_two_models',
+            ['name' => 'Andre', 'age' => 30, 'user_name' => 'Gil'],
+        );
+        expect($result)->toBe('Andre/Gil');
+    });
+
+    it('hydrates a model parameter that is not the first one', function () {
+        $service = new stdClass;
+        $service->name = 'svc';
+
+        $result = call(
+            'Attributes\\Strictify\\Tests\\Integration\\call_function_dependency_then_model',
+            ['name' => 'Andre', 'age' => 30],
+            ['service' => $service],
+        );
+        expect($result)->toBe('svc>Andre');
+    });
+
+    it('propagates an exception thrown by the callable', function () {
+        call('Attributes\\Strictify\\Tests\\Integration\\call_function_throws', []);
+    })->throws(Error::class, 'callable failure');
+
+    it('reports the positional index when an internal function misses a required argument', function () {
+        call('str_repeat', [], ['x']);
+    })->throws(Error::class, 'No value provided for parameter 2 of str_repeat().');
+});
+
+describe('call function sensitive parameters', function () {
+    it('passes the real value to a #[SensitiveParameter] parameter', function () {
+        $secret = str_repeat('s', 8);
+
+        $result = call(
+            'Attributes\\Strictify\\Tests\\Integration\\call_function_sensitive_echo',
+            [],
+            ['user' => 'andre', 'password' => $secret],
+        );
+
+        expect($result)->toBe('andre:8');
+    });
+
+    it('redacts #[SensitiveParameter] arguments in traces of callables invoked via call()', function () {
+        $secret = str_repeat('s', 8);
+        SensitiveCallRecorder::$backtrace = null;
+
+        try {
+            call(
+                'Attributes\\Strictify\\Tests\\Integration\\call_function_sensitive_throws',
+                [],
+                ['user' => 'andre', 'password' => $secret],
+            );
+            expect(false)->toBeTrue('Error expected');
+        } catch (Error $e) {
+            expect($e->getMessage())->toBe('sensitive failure');
+
+            // Backtrace captured inside the callable: the sensitive arg is
+            // replaced by SensitiveParameterValue, the other arg is intact
+            $args = SensitiveCallRecorder::$backtrace[0]['args'];
+            expect($args[0])->toBe('andre');
+            expect($args[1])->toBeInstanceOf(\SensitiveParameterValue::class);
+
+            // The exception trace must not leak the secret either
+            expect($e->getTraceAsString())->not->toContain($secret);
+        }
+    });
+
+    it('reports a missing sensitive dependency positionally, without the parameter name', function () {
+        try {
+            call(
+                'Attributes\\Strictify\\Tests\\Integration\\call_function_sensitive_required',
+                [],
+                ['user' => 'andre'],
+            );
+            expect(false)->toBeTrue('Error expected');
+        } catch (Error $e) {
+            expect($e->getMessage())->toBe(
+                'No value provided for parameter 2 of Attributes\\Strictify\\Tests\\Integration\\call_function_sensitive_required().',
+            );
+            expect($e->getMessage())->not->toContain('password');
+        }
+    });
+
+    it('still names non-sensitive parameters in the missing-dependency error', function () {
+        call(
+            'Attributes\\Strictify\\Tests\\Integration\\call_function_takes_two_dependencies',
+            [],
+            ['first' => new stdClass],
+        );
+    })->throws(
+        Error::class,
+        'No value provided for parameter $second of Attributes\\Strictify\\Tests\\Integration\\call_function_takes_two_dependencies().',
+    );
+});
+
+function call_function_sensitive_echo(string $user, #[\SensitiveParameter] string $password): string
+{
+    return $user.':'.strlen($password);
+}
+
+class SensitiveCallRecorder
+{
+    public static ?array $backtrace = null;
+}
+
+function call_function_sensitive_throws(string $user, #[\SensitiveParameter] string $password): void
+{
+    SensitiveCallRecorder::$backtrace = debug_backtrace();
+
+    throw new Error('sensitive failure');
+}
+
+function call_function_sensitive_required(string $user, #[\SensitiveParameter] string $password): string
+{
+    return $user;
+}
 
 function service(string $name): stdClass
 {

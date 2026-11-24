@@ -12,12 +12,16 @@ final class Sequence implements Field
 {
     public mixed $of;
 
-    public function __construct(mixed $of)
+    public bool $uniqueValues;
+
+    public bool $sequential;
+
+    public function __construct(mixed $of, bool $uniqueValues = false, bool $sequential = true)
     {
         if (! (is_int($of) || is_string($of) || $of instanceof Type
             || $of instanceof Sequence || $of instanceof Union || $of instanceof Intersection || $of instanceof Dict)) {
             throw new \TypeError(sprintf(
-                'Sequence::__construct(): Argument #1 ($of) must be of type int|string|\Attributes\Strictify\Type|Sequence|Union|Intersection|Dict, %s given',
+                'Sequence::__construct(): Argument #1 ($of) must be of type int|string|\\Attributes\\Strictify\\Type|Sequence|Union|Intersection|Dict, %s given',
                 Value::typeName($of)
             ));
         }
@@ -30,5 +34,7 @@ final class Sequence implements Field
         }
 
         $this->of = $of;
+        $this->uniqueValues = $uniqueValues;
+        $this->sequential = $sequential;
     }
 }

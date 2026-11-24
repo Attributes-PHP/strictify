@@ -58,7 +58,9 @@ final class Caller
                 break;
             }
 
-            if ($isInternal) {
+            // A #[\SensitiveParameter] parameter is reported positionally:
+            // the named message would disclose the parameter name
+            if ($isInternal || self::isSensitiveParameter($parameter)) {
                 throw new \Error(sprintf(
                     'No value provided for parameter %d of %s().',
                     $parameter->getPosition() + 1,
@@ -133,6 +135,15 @@ final class Caller
         }
 
         return $required;
+    }
+
+    /**
+     * Whether the parameter carries the #[\SensitiveParameter] attribute
+     * (a PHP 8.4+ core attribute; absent on older versions).
+     */
+    private static function isSensitiveParameter(ReflectionParameter $parameter): bool
+    {
+        return $parameter->getAttributes(\SensitiveParameter::class) !== [];
     }
 
     /**

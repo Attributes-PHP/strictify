@@ -19,11 +19,12 @@ final class Hydrator
 {
     /**
      * The prepared property entries of each model class hierarchy per
-     * alias generator: the property reflection, its resolved field name
-     * and whether it declares a default value, all static per class, so
-     * the walk and the field-name resolution run once per class.
+     * alias generator: the property reflection, its resolved field name,
+     * whether it declares a default value, whether it is #[Sensitive], the
+     * compiled type plan and the instantiated constraints, all static per
+     * class, so the walk and the field-name resolution run once per class.
      *
-     * @var array<string, list<array{property: ReflectionProperty, name: string, fieldName: string, hasDefault: bool, plan: TypePlan}>>
+     * @var array<string, list<array{property: ReflectionProperty, name: string, fieldName: string, hasDefault: bool, sensitive: bool, plan: TypePlan, constraints: list<object>}>>
      */
     private static array $entriesCache = [];
 
@@ -83,7 +84,7 @@ final class Hydrator
     ): bool {
         $cacheKey = $model::class."\0".(string) $configs->aliasGenerator;
 
-        foreach (self::entries($cacheKey, $model::class, $configs->aliasGenerator) as $entry) {
+        foreach (self::entriesFor($cacheKey, $model::class, $configs->aliasGenerator) as $entry) {
             $fieldName = $entry['fieldName'];
 
             if (! array_key_exists($fieldName, $rawData)) {
@@ -101,6 +102,17 @@ final class Hydrator
             }
 
             $value = $rawData[$fieldName];
+
+            // String normalizations run before the type check, so
+            // constraints and the written property see the normalized
+            // value. Strings bound for non-string hints (e.g. DateTime
+            // coercion) are left untouched.
+            if (is_string($value)
+                && ($configs->strToLower || $configs->strToUpper || $configs->stripWhitespace)
+                && ($entry['plan']->untyped || $entry['plan']->mixed || ($entry['plan']->basicMask & Masks::STRING) !== 0)) {
+                $value = self::transformString($value, $configs);
+            }
+
             $result = TypeHintValidator::validate($value, $entry['property'], $configs, $errors, $parentPath, $fieldName, $entry['plan']);
 
             if (! $result['ok']) {
@@ -111,8 +123,39 @@ final class Hydrator
                 continue;
             }
 
-            $model->{$entry['name']} = $result['value'];
+            $value = $result['value'];
+
+            // Constraints run on the (possibly coerced) value; a failing
+            // constraint keeps the value out of the model. Every declared
+            // constraint reports its own error unless stopAtFirstError
+            // aborts the run.
+            $constraintsValid = true;
+
+            foreach ($entry['constraints'] as $constraint) {
+                if (! Constraints::run($constraint, $value, $parentPath, $fieldName, $entry['property'], $configs, $errors)) {
+                    $constraintsValid = false;
+
+                    if ($configs->stopAtFirstError) {
+                        return false;
+                    }
+                }
+            }
+
+            if (! $constraintsValid) {
+                continue;
+            }
+
+            // Virtual (get-only) hooked properties have no backing store
+            // and cannot be written; the standard write path runs the set
+            // hook of hooked properties
+            if (self::isVirtual($entry['property'])) {
+                continue;
+            }
+
+            $model->{$entry['name']} = $value;
         }
+
+        self::checkExtraFields($rawData, $model, $configs, $parentPath, $errors);
 
         return $errors === [];
     }
@@ -121,9 +164,9 @@ final class Hydrator
      * The prepared property entries of the model class hierarchy,
      * cached per class and alias generator.
      *
-     * @return list<array{property: ReflectionProperty, fieldName: string, hasDefault: bool, plan: TypePlan}
+     * @return list<array{property: ReflectionProperty, name: string, fieldName: string, hasDefault: bool, sensitive: bool, plan: TypePlan, constraints: list<object>}>
      */
-    private static function entries(string $cacheKey, string $class, ?string $generator): array
+    public static function entriesFor(string $cacheKey, string $class, ?string $generator): array
     {
         if (isset(self::$entriesCache[$cacheKey])) {
             return self::$entriesCache[$cacheKey];
@@ -143,17 +186,103 @@ final class Hydrator
                     continue;
                 }
 
+                $plan = TypeHintValidator::plan($property);
+
+                Constraints::checkPlacement($property, $plan);
+
                 $entries[] = [
                     'property' => $property,
                     'name' => $property->getName(),
                     'fieldName' => FieldNameResolver::resolve($property, $generator),
                     'hasDefault' => $property->hasDefaultValue(),
-                    'plan' => TypeHintValidator::plan($property),
+                    'sensitive' => ErrorMessages::isSensitive($property),
+                    'plan' => $plan,
+                    'constraints' => Constraints::of($property),
                 ];
             }
         }
 
         return self::$entriesCache[$cacheKey] = $entries;
+    }
+
+    /**
+     * ModelConfigs extra: 'forbid' reports every input key that resolves to
+     * no property of the model; 'allow' stores unknown keys as dynamic
+     * properties; 'ignore' drops them.
+     */
+    private static function checkExtraFields(
+        array $rawData,
+        BaseModel $model,
+        ResolvedConfigs $configs,
+        ?string $parentPath,
+        array &$errors,
+    ): void {
+        if ($configs->extra !== 'forbid' && $configs->extra !== 'allow') {
+            return;
+        }
+
+        $cacheKey = $model::class."\0".(string) $configs->aliasGenerator;
+        $known = [];
+
+        foreach (self::entriesFor($cacheKey, $model::class, $configs->aliasGenerator) as $entry) {
+            $known[] = $entry['fieldName'];
+        }
+
+        foreach ($rawData as $key => $entry) {
+            if (is_string($key) && in_array($key, $known, true)) {
+                continue;
+            }
+
+            if ($configs->extra === 'allow') {
+                // Integer keys have no property name, and a key naming a
+                // declared property (reachable when an alias generator
+                // renamed the expected key) is not a dynamic property
+                if (! is_string($key) || property_exists($model, $key)) {
+                    continue;
+                }
+
+                $model->{$key} = $entry;
+
+                continue;
+            }
+
+            ErrorMessages::addExtraError($parentPath, (string) $key, $entry, $errors);
+
+            if ($configs->stopAtFirstError) {
+                return;
+            }
+        }
+    }
+
+    /**
+     * Applies the ModelConfigs string normalizations (stripWhitespace,
+     * strToLower, strToUpper) in that order, so strToUpper wins when both
+     * case flags are set.
+     */
+    private static function transformString(string $value, ResolvedConfigs $configs): string
+    {
+        if ($configs->stripWhitespace) {
+            $value = trim($value, " \t\n\r\0\x0B");
+        }
+
+        if ($configs->strToLower) {
+            $value = strtolower($value);
+        }
+
+        if ($configs->strToUpper) {
+            $value = strtoupper($value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Whether the property is a virtual (get-only) hooked property, which
+     * has no backing store to write to. Property hooks are PHP 8.4+.
+     */
+    private static function isVirtual(ReflectionProperty $property): bool
+    {
+        return PHP_VERSION_ID >= 80400 && $property->isVirtual();
     }
 
     /**

@@ -19,7 +19,7 @@ final class ModelConfigs
 
     private bool $stripWhitespace = false;
 
-    private string $extra = 'ignore';
+    private ?string $extra = null;
 
     private bool $strict = true;
 
@@ -32,7 +32,7 @@ final class ModelConfigs
         bool $strToLower = false,
         bool $strToUpper = false,
         bool $stripWhitespace = false,
-        string $extra = 'ignore',
+        ?string $extra = null,
         bool $strict = true,
         bool $stopAtFirstError = false,
     ) {
@@ -48,7 +48,7 @@ final class ModelConfigs
             $this->aliasGenerator = $normalized;
         }
 
-        if (! in_array(strtolower($extra), self::EXTRAS, true)) {
+        if ($extra !== null && ! in_array(strtolower($extra), self::EXTRAS, true)) {
             throw new \ValueError(sprintf(
                 'Attributes\Strictify\ModelConfigs::__construct(): Argument #5 must be of one of the following options: %s',
                 implode(', ', self::EXTRAS)
@@ -58,7 +58,7 @@ final class ModelConfigs
         $this->strToLower = $strToLower;
         $this->strToUpper = $strToUpper;
         $this->stripWhitespace = $stripWhitespace;
-        $this->extra = strtolower($extra);
+        $this->extra = $extra === null ? null : strtolower($extra);
         $this->strict = $strict;
         $this->stopAtFirstError = $stopAtFirstError;
     }
@@ -83,7 +83,7 @@ final class ModelConfigs
         return $this->stripWhitespace;
     }
 
-    public function getExtra(): string
+    public function getExtra(): ?string
     {
         return $this->extra;
     }

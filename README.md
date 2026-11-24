@@ -40,9 +40,17 @@ var_dump($user->birthday); // object(DateTime) "1994-01-01 09:00:00.000000" (+00
 - Typed `array` properties declare their element shape with the `Sequence`, `Union`, `Intersection` and `Dict`
   attributes
 - `Alias` attribute and `ModelConfigs` alias generators map input keys to properties
-- Custom error messages per field with the `ErrorMessage` attribute
+- Custom error messages per field with the `ErrorMessage` attribute, translatable via `ErrorTranslator::set()`
+- Field constraints: `Min`, `Max`, `Between`, `Size`, `Regex`, `In`, `Contains`, `StartsWith`, `EndsWith`, `AlphaDash`, `Ascii`, `MultipleOf`, `Ulid`, `Uuid` and `DateTime`, or your own via the `Fields\Constraint` interface (`ConfigAwareConstraint` also receives the model configs)
+- `ModelConfigs` options: string normalization (`strToLower`, `strToUpper`, `stripWhitespace`), `extra: ignore|forbid|allow` (a null `extra` resolves per `#[AllowDynamicProperties]`), `stopAtFirstError`
+- `toDict()` serializes models back to arrays (alias-aware, `#[Sensitive]` fields omitted unless requested)
 - `beforeValidation`/`afterValidation` hooks on the model
 - `call()` invokes any callable with hydrated models and injected dependencies
+
+> The C extension ([strictify-ext](https://github.com/Attributes-PHP/strictify-ext)) additionally masks
+> `#[Sensitive]` values in `var_dump`/`print_r`/backtrace output; that debug-output hook is not
+> available in pure PHP, where `#[Sensitive]` still redacts `{value}` in error messages and omits
+> the field from `toDict()`.
 
 ## Requirements
 

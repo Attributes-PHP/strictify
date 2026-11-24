@@ -22,6 +22,23 @@ final class TypePlan
     public int $basicMask = 0;
 
     /**
+     * Whether the hint allows null (a nullable single type or a union
+     * with a null arm).
+     */
+    public bool $nullable = false;
+
+    /**
+     * Whether the hint is a union type (a type list: scalar unions,
+     * class unions or DNF types).
+     */
+    public bool $isUnion = false;
+
+    /**
+     * Whether a union hint carries a DNF intersection arm.
+     */
+    public bool $hasDnfArm = false;
+
+    /**
      * The resolved class arms in declaration order.
      *
      * @var list<array{class: string, dateTime: bool, baseModel: bool}>
