@@ -1,3 +1,5 @@
+# Strictify
+
 # Attributes Strictify
 
 <p align="center">
@@ -8,6 +10,18 @@
 
 **Attributes Strictify** is a Pydantic-inspired PHP library for validating data via type hints. Your model types are the
 schema: no configuration files, no YAML.
+
+------
+
+**Strictify** is a Pydantic-inspired PHP library for validating data via type hints at lightning speed ⚡️
+
+## Prerequisites
+
+- PHP 8.2 or later
+
+We aim to support versions that haven't reached their end-of-life.
+
+## How it works?
 
 ```php
 <?php
@@ -25,36 +39,26 @@ $rawData = [
     'age' => 30,
     'birthday' => '1994-01-01T09:00:00+00:00',
 ];
-
 $user = validate($rawData, new User());
 
 var_dump($user->age);      // int(30)
-var_dump($user->birthday); // object(DateTime) "1994-01-01 09:00:00.000000" (+00:00)
+var_dump($user->birthday); // object(DateTime) { ["date"] => string(26) "1994-01-01 09:00:00.000000", (...) }
 ```
 
-## Features
+### Need to call a function?
 
-- Validates data via type-hinting and hydrates raw arrays into models
-- Strict by default, with opt-in loose scalar coercion via `#[ModelConfigs(strict: false)]`
-- Nested models hydrate recursively, with dot-notation error paths (`users.0.email`)
-- Typed `array` properties declare their element shape with the `Sequence`, `Union`, `Intersection` and `Dict`
-  attributes
-- `Alias` attribute and `ModelConfigs` alias generators map input keys to properties
-- Custom error messages per field with the `ErrorMessage` attribute, translatable via `ErrorTranslator::set()`
-- Field constraints: `Min`, `Max`, `Between`, `Size`, `Regex`, `In`, `Contains`, `StartsWith`, `EndsWith`, `AlphaDash`, `Ascii`, `MultipleOf`, `Ulid`, `Uuid` and `DateTime`, or your own via the `Fields\Constraint` interface (`ConfigAwareConstraint` also receives the model configs)
-- `ModelConfigs` options: string normalization (`strToLower`, `strToUpper`, `stripWhitespace`), `extra: ignore|forbid|allow` (a null `extra` resolves per `#[AllowDynamicProperties]`), `stopAtFirstError`
-- `toDict()` serializes models back to arrays (alias-aware, `#[Sensitive]` fields omitted unless requested)
-- `beforeValidation`/`afterValidation` hooks on the model
-- `call()` invokes any callable with hydrated models and injected dependencies
+```php
+<?php
 
-> The C extension ([strictify-ext](https://github.com/Attributes-PHP/strictify-ext)) additionally masks
-> `#[Sensitive]` values in `var_dump`/`print_r`/backtrace output; that debug-output hook is not
-> available in pure PHP, where `#[Sensitive]` still redacts `{value}` in error messages and omits
-> the field from `toDict()`.
+use function Attributes\Strictify\call;
 
-## Requirements
+function myFunction(User $user) {
+    var_dump($user->age);      // int(30)
+    var_dump($user->birthday); // object(DateTime) { ["date"] => string(26) "1994-01-01 09:00:00.000000", (...) }
+}
 
-- PHP 8.2 or later
+call("myFunction", $rawData);
+```
 
 ## Installation
 
@@ -62,53 +66,14 @@ var_dump($user->birthday); // object(DateTime) "1994-01-01 09:00:00.000000" (+00
 composer require attributes-php/strictify
 ```
 
-## Usage
+## Documentation
 
-```php
-<?php
+Full documentation lives at [strictify.attributes-php.com](https://strictify.attributes-php.com):
 
-use function Attributes\Strictify\call;
-use function Attributes\Strictify\validate;
-use Attributes\Strictify\BaseModel;
-use Attributes\Strictify\Fields\Sequence;
-use Attributes\Strictify\ModelConfigs;
-use Attributes\Strictify\Type;
+- [Quickstart](https://strictify.attributes-php.com/quickstart/) — first model and first validation in under a minute
+- [Guides](https://strictify.attributes-php.com/guides/validating-payloads/) — validating payloads, nested models, aliases, error messages, sensitive data, `call()`, `toDict()`
+- [Reference](https://strictify.attributes-php.com/validate/) — `validate()`, `toDict()`, `call()`, `ModelConfigs`, constraints, exceptions, API
+- [FAQ](https://strictify.attributes-php.com/faq/) and [Changelog](https://strictify.attributes-php.com/changelog/)
+- For LLMs and agents: [llms.txt](https://strictify.attributes-php.com/llms.txt) indexes every page (each also served as Markdown), and [llms-full.txt](https://strictify.attributes-php.com/llms-full.txt) has the full docs in one file
 
-#[ModelConfigs(strict: false)]
-class Blog extends BaseModel
-{
-    public string $title;
-
-    #[Sequence(Type::string)]
-    public array $tags;
-
-    public ?DateTime $publishedAt = null;
-}
-
-$blog = validate([
-    'title' => 'Hello',
-    'tags' => ['php', 'validation'],
-    'publishedAt' => '2025-03-06T08:57:06+00:00',
-], new Blog());
-
-// Call any callable with validated models and injected dependencies
-$result = call('registerBlog', $rawData, $dependencies);
-```
-
-Validation failures throw `Attributes\Strictify\Exceptions\ValidationException` with the error list keyed by field path:
-
-```php
-use Attributes\Strictify\Exceptions\ValidationException;
-
-try {
-    validate($rawData, new Blog());
-} catch (ValidationException $e) {
-    $e->getErrors();
-    // [
-    //     'title' => ['Field is required'],
-    //     'tags.1' => ['Must be string'],
-    // ]
-}
-```
-
-Attributes Strictify was created by **[André Gil](https://www.linkedin.com/in/andre-gil/)** and is open-sourced software licensed under the **[MIT license](https://opensource.org/licenses/MIT)**.
+Strictify Extension was created by **[André Gil](https://www.linkedin.com/in/andre-gil/)** and is open-sourced software licensed under the **[MIT license](https://opensource.org/licenses/MIT)**.
