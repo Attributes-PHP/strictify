@@ -9,7 +9,7 @@ use Attributes\Strictify\BaseModel;
 use function Attributes\Strictify\validate;
 
 describe('validate function basic functionality', function () {
-    it('has validate function in Attributes\Strictify namespace', function () {
+    it('has validate function in Strictify namespace', function () {
         expect(function_exists('Attributes\Strictify\validate'))->toBeTrue();
     });
 

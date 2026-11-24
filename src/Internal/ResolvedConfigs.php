@@ -9,6 +9,10 @@ use Attributes\Strictify\ModelConfigs;
 /**
  * The ModelConfigs of a model class, resolved from its class attribute.
  *
+ * A null (or omitted) extra is resolved per model class here: 'allow' when
+ * the class is marked #[AllowDynamicProperties] (the flag is inherited by
+ * child classes), 'ignore' otherwise.
+ *
  * @internal
  */
 final class ResolvedConfigs
@@ -40,7 +44,7 @@ final class ResolvedConfigs
         $strToLower = false;
         $strToUpper = false;
         $stripWhitespace = false;
-        $extra = 'ignore';
+        $extra = null;
         $strict = true;
         $stopAtFirstError = false;
 
@@ -107,6 +111,8 @@ final class ResolvedConfigs
             }
         }
 
+        $extra ??= self::allowsDynamicProperties($class) ? 'allow' : 'ignore';
+
         return self::$cache[$class] = new self(
             $generator,
             $strToLower,
@@ -119,7 +125,8 @@ final class ResolvedConfigs
     }
 
     /**
-     * Materializes the configs as a ModelConfigs instance (hook argument).
+     * Materializes the configs as a ModelConfigs instance (hook argument),
+     * with the per-class resolved extra.
      */
     public function toModelConfigs(): ModelConfigs
     {
@@ -132,6 +139,20 @@ final class ResolvedConfigs
             $this->strict,
             $this->stopAtFirstError,
         );
+    }
+
+    /**
+     * Whether the class hierarchy carries #[AllowDynamicProperties].
+     */
+    private static function allowsDynamicProperties(string $class): bool
+    {
+        for ($current = $class; $current !== false; $current = get_parent_class($current)) {
+            if ((new \ReflectionClass($current))->getAttributes(\AllowDynamicProperties::class) !== []) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function argumentIndex(string $name): int

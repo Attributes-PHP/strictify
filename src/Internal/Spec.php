@@ -25,6 +25,15 @@ final class Spec
     public bool $isIntersection = false;
 
     /**
+     * Whether the spec comes from a Sequence attribute: the list form has
+     * an implicit integer key spec and, unless disabled, requires the
+     * sequential keys 0, 1, 2, ...
+     */
+    public bool $isSequence = false;
+
+    public bool $requireSequential = false;
+
+    /**
      * The rendered expected-type strings of the value and key arms,
      * computed lazily for repeated element errors.
      */

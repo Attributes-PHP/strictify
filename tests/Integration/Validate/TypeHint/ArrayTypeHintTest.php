@@ -19,12 +19,13 @@ use ValueError;
 
 use function Attributes\Strictify\validate;
 
-use const Attributes\Strictify\bool;
-use const Attributes\Strictify\float;
-use const Attributes\Strictify\int;
-use const Attributes\Strictify\object;
-use const Attributes\Strictify\sequence;
-use const Attributes\Strictify\string;
+use const Attributes\Strictify\T_BOOL;
+use const Attributes\Strictify\T_FLOAT;
+use const Attributes\Strictify\T_INT;
+use const Attributes\Strictify\T_NULL;
+use const Attributes\Strictify\T_OBJECT;
+use const Attributes\Strictify\T_SEQUENCE;
+use const Attributes\Strictify\T_STRING;
 
 class ArrayTypeHintAddress extends BaseModel
 {
@@ -91,10 +92,10 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $model = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Sequence(of: string)]
+                #[Sequence(of: T_STRING)]
                 public array $tags;
 
-                #[Union(bool, int, sequence)]
+                #[Sequence(of: new Union(T_BOOL, T_INT, T_SEQUENCE))]
                 public array $mixed;
             };
 
@@ -124,7 +125,7 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $model = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Union(bool | int | string)]
+                #[Sequence(of: new Union(T_BOOL | T_INT | T_STRING))]
                 public array $values;
             };
 
@@ -146,13 +147,13 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $list = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Union(bool, int, string)]
+                #[Sequence(of: new Union(T_BOOL, T_INT, T_STRING))]
                 public array $values;
             };
         $bitmask = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Union(bool | int | string)]
+                #[Sequence(of: new Union(T_BOOL | T_INT | T_STRING))]
                 public array $values;
             };
 
@@ -164,13 +165,13 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $list = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Union(int, bool)] // int arm first: '1' coerces to int
+                #[Sequence(of: new Union(T_INT, T_BOOL))] // int arm first: '1' coerces to int
                 public array $values;
             };
         $bitmask = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Union(int | bool)] // fixed order: bool first
+                #[Sequence(of: new Union(T_INT | T_BOOL))] // fixed order: bool first
                 public array $values;
             };
 
@@ -182,13 +183,13 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $bitmask = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Sequence(of: string | int | float)]
+                #[Sequence(of: T_STRING | T_INT | T_FLOAT)]
                 public array $values;
             };
         $union = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Sequence(of: new Union(string, int, float))]
+                #[Sequence(of: new Union(T_STRING, T_INT, T_FLOAT))]
                 public array $values;
             };
 
@@ -208,9 +209,9 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         }
     });
 
-    it('rejects bitmask key types outside integer and string', function () {
+    it('rejects bitmask key types outside the PHP-castable key types', function () {
         $model = new class extends BaseModel {
-            #[Dict(key: bool | int, of: string)]
+            #[Dict(key: T_OBJECT | T_INT, of: T_STRING)]
             public array $keyed;
         };
 
@@ -299,7 +300,7 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $model = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Union(string, int)]
+                #[Sequence(of: new Union(T_STRING, T_INT))]
                 public array $mixed;
             };
 
@@ -311,7 +312,7 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $model = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Union(bool, int, string)]
+                #[Sequence(of: new Union(T_BOOL, T_INT, T_STRING))]
                 public array $mixed;
             };
 
@@ -329,7 +330,7 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $model = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Union(int, string)]
+                #[Sequence(of: new Union(T_INT, T_STRING))]
                 public array $mixed;
             };
 
@@ -341,13 +342,13 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $boolFirst = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Union(bool, int)]
+                #[Sequence(of: new Union(T_BOOL, T_INT))]
                 public array $values;
             };
         $intFirst = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Union(int, bool)]
+                #[Sequence(of: new Union(T_INT, T_BOOL))]
                 public array $values;
             };
 
@@ -362,7 +363,7 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $model = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Dict(key: int, of: string)]
+                #[Dict(key: T_INT, of: T_STRING)]
                 public array $keyed;
             };
 
@@ -380,7 +381,7 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $model = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Dict(key: string, of: int)]
+                #[Dict(key: T_STRING, of: T_INT)]
                 public array $keyed;
             };
 
@@ -392,7 +393,7 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $model = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Dict(key: new Union(int, string), of: string)]
+                #[Dict(key: new Union(T_INT, T_STRING), of: T_STRING)]
                 public array $keyed;
             };
 
@@ -400,11 +401,101 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         expect($result->keyed)->toBe(['a' => 'b', 3 => 'c']);
     });
 
+    it('accepts a null (empty-string) key when the key spec includes T_NULL', function () {
+        $model = new
+            #[ModelConfigs(strict: false)]
+            class extends BaseModel {
+                #[Dict(key: T_NULL, of: T_INT)]
+                public array $keyed;
+            };
+
+        // PHP normalizes a null array key to ""
+        $result = validate(['keyed' => [null => 1]], $model);
+        expect($result->keyed)->toBe(['' => 1]);
+    });
+
+    it('accepts integer and null keys for a T_INT | T_NULL key spec', function () {
+        $model = new
+            #[ModelConfigs(strict: false)]
+            class extends BaseModel {
+                #[Dict(key: T_INT | T_NULL, of: T_STRING)]
+                public array $keyed;
+            };
+
+        $result = validate(['keyed' => [7 => 'a', null => 'b']], $model);
+        expect($result->keyed)->toBe([7 => 'a', '' => 'b']);
+    });
+
+    it('rejects non-empty string keys when the key spec is T_NULL only', function () {
+        $model = new
+            #[ModelConfigs(strict: false)]
+            class extends BaseModel {
+                #[Dict(key: T_NULL, of: T_INT)]
+                public array $keyed;
+            };
+
+        try {
+            validate(['keyed' => ['a' => 1]], $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getErrors())->toBe([
+                'keyed.a' => ['Must be null'],
+            ]);
+        }
+    });
+
+    it('accepts integer keys cast from float keys for a T_FLOAT key spec', function () {
+        $model = new
+            #[ModelConfigs(strict: false)]
+            class extends BaseModel {
+                #[Dict(key: T_FLOAT, of: T_STRING)]
+                public array $keyed;
+            };
+
+        // PHP casts the float key 2.0 to int 2
+        $result = validate(['keyed' => [2.0 => 'a']], $model);
+        expect($result->keyed)->toBe([2 => 'a']);
+
+        try {
+            validate(['keyed' => ['a' => 'b']], $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getErrors())->toBe([
+                'keyed.a' => ['Must be integer'],
+            ]);
+        }
+    });
+
+    it('accepts integer keys cast from bool keys for a T_BOOL key spec', function () {
+        $model = new
+            #[ModelConfigs(strict: false)]
+            class extends BaseModel {
+                #[Dict(key: T_BOOL, of: T_STRING)]
+                public array $keyed;
+            };
+
+        // PHP casts bool keys to int: true -> 1, false -> 0
+        $result = validate(['keyed' => [true => 'a', false => 'b']], $model);
+        expect($result->keyed)->toBe([1 => 'a', 0 => 'b']);
+    });
+
+    it('accepts every PHP-castable key type in one key spec', function () {
+        $model = new
+            #[ModelConfigs(strict: false)]
+            class extends BaseModel {
+                #[Dict(key: T_INT | T_STRING | T_FLOAT | T_BOOL | T_NULL, of: T_INT)]
+                public array $keyed;
+            };
+
+        $result = validate(['keyed' => [5 => 1, 'k' => 2, 2.0 => 3, false => 4, null => 5]], $model);
+        expect($result->keyed)->toBe([5 => 1, 'k' => 2, 2 => 3, 0 => 4, '' => 5]);
+    });
+
     it('rejects dict values not matching the value spec', function () {
         $model = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Dict(key: string, of: int)]
+                #[Dict(key: T_STRING, of: T_INT)]
                 public array $keyed;
             };
 
@@ -418,7 +509,7 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         }
     });
 
-    it('does not check keys for the list form', function () {
+    it('rejects non-sequential keys for the list form by default', function () {
         $model = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
@@ -426,15 +517,47 @@ describe('type-hint array validation via attributes (loose mode)', function () {
                 public array $tags;
             };
 
-        $result = validate(['tags' => ['any' => 'a']], $model);
-        expect($result->tags)->toBe(['any' => 'a']);
+        try {
+            validate(['tags' => [2 => 'a']], $model);
+            expect(false)->toBeTrue('ValidationException expected');
+        } catch (ValidationException $e) {
+            expect($e->getErrors())->toBe(['tags.2' => ['Must be a sequential list (keys 0, 1, 2, ...)']]);
+        }
+    });
+
+    it('accepts gapped integer keys for the list form with sequential: false', function () {
+        $model = new
+            #[ModelConfigs(strict: false)]
+            class extends BaseModel {
+                #[Sequence(Type::string, sequential: false)]
+                public array $tags;
+            };
+
+        $result = validate(['tags' => [3 => 'a']], $model);
+        expect($result->tags)->toBe([3 => 'a']);
+    });
+
+    it('rejects string keys for the list form with sequential: false', function () {
+        $model = new
+            #[ModelConfigs(strict: false)]
+            class extends BaseModel {
+                #[Sequence(Type::string, sequential: false)]
+                public array $tags;
+            };
+
+        try {
+            validate(['tags' => ['any' => 'a']], $model);
+            expect(false)->toBeTrue('ValidationException expected');
+        } catch (ValidationException $e) {
+            expect($e->getErrors())->toBe(['tags.any' => ['Must be integer']]);
+        }
     });
 
     it('accepts nested arrays via a sequence arm', function () {
         $model = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Union(sequence, string)]
+                #[Sequence(of: new Union(T_SEQUENCE, T_STRING))]
                 public array $values;
             };
 
@@ -446,7 +569,7 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $model = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Union(bool, new Sequence(Type::int))]
+                #[Sequence(of: new Union(T_BOOL, new Sequence(Type::int)))]
                 public array $matrix;
             };
 
@@ -467,7 +590,7 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $model = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Union(bool, int, string)]
+                #[Sequence(of: new Union(T_BOOL, T_INT, T_STRING))]
                 public array $values;
             };
 
@@ -486,7 +609,7 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $model = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Union(string, object)]
+                #[Sequence(of: new Union(T_STRING, T_OBJECT))]
                 public array $values;
             };
 
@@ -499,8 +622,8 @@ describe('type-hint array validation via attributes (loose mode)', function () {
         $model = new
             #[ModelConfigs(strict: false)]
             class extends BaseModel {
-                #[Union(bool, Dict::class)]
-                #[Dict(key: int, of: string)]
+                #[Sequence(of: new Union(T_BOOL, Dict::class))]
+                #[Dict(key: T_INT, of: T_STRING)]
                 public array $values;
             };
 
@@ -660,7 +783,7 @@ describe('type-hint array attribute error messages', function () {
     it('applies custom ErrorMessage templates to element errors', function () {
         $model = new class extends BaseModel {
             #[ErrorMessage(type: 'Ups wrong type {expected}')]
-            #[Union(bool, int, string)]
+            #[Sequence(of: new Union(T_BOOL, T_INT, T_STRING))]
             public array $values;
         };
 
@@ -676,7 +799,7 @@ describe('type-hint array attribute error messages', function () {
 
     it('propagates a spec error instead of masking it with an empty ValidationException', function () {
         $model = new class extends BaseModel {
-            #[Union(Type::bool, new ArrayTypeHintMissingAttribute)]
+            #[Sequence(of: new Union(Type::bool, new ArrayTypeHintMissingAttribute))]
             public array $values;
         };
 
@@ -706,7 +829,7 @@ describe('type-hint array attribute error messages', function () {
 
     it('throws a ValueError when a Dict arm references a missing Dict attribute', function () {
         $model = new class extends BaseModel {
-            #[Union(bool, Dict::class)]
+            #[Sequence(of: new Union(T_BOOL, Dict::class))]
             public array $values;
         };
 
@@ -724,7 +847,7 @@ describe('type-hint array attribute error messages', function () {
 
     it('throws a ValueError when an arm type is unsupported', function () {
         $model = new class extends BaseModel {
-            #[Union(3.14)]
+            #[Sequence(of: 3.14)]
             public array $values;
         };
 

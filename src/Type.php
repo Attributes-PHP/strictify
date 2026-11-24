@@ -14,6 +14,8 @@ enum Type: int
 
     case string = 64;
 
+    case null = 2;
+
     case sequence = 128;
 
     case dict = 268435456;

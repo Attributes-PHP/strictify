@@ -25,7 +25,7 @@ use ReflectionProperty;
  */
 final class ArraySpecValidator
 {
-    private const ATTRIBUTE_CLASSES = [Sequence::class, Union::class, Intersection::class, Dict::class];
+    private const ATTRIBUTE_CLASSES = [Sequence::class, Intersection::class, Dict::class];
 
     private const REFERENCE_NAMES = [
         'attributes\strictify\fields\sequence' => Sequence::class,
@@ -73,11 +73,21 @@ final class ArraySpecValidator
         $basePath = ($parentPath === null || $parentPath === '') ? $fieldName : $parentPath.'.'.$fieldName;
         $allValid = true;
 
+        // A packed array has only the sequential integer keys 0, 1, 2, ...,
+        // so both the list-form key check and the sequential-keys check pass
+        // on every element and can be skipped
+        $packed = array_is_list($value);
+        $checkKeys = ($spec->keyArms !== null || $spec->isSequence) && ! ($packed && $spec->keyArms === null);
+        $checkSequential = $spec->requireSequential && ! $packed;
+        $sequentialIndex = 0;
+
         foreach ($value as $key => $element) {
             $elementName = (string) $key;
 
-            if (! self::keyMatchesArms($key, $spec)) {
-                $spec->keyExpected ??= self::armsExpected($spec->keyArms ?? [], false);
+            if ($checkKeys && ! self::keyMatchesArms($key, $spec)) {
+                $spec->keyExpected ??= $spec->keyArms !== null
+                    ? self::armsExpected($spec->keyArms, false)
+                    : 'integer';
 
                 ErrorMessages::addFieldError(
                     ErrorMessages::TYPE,
@@ -96,6 +106,32 @@ final class ArraySpecValidator
                 }
 
                 continue;
+            }
+
+            // A Sequence with sequential: true (the default) must be a list:
+            // string keys were already rejected above, so only an integer
+            // key out of order (a gap or a repeat) lands here
+            if ($checkSequential) {
+                if (is_int($key) && $key === $sequentialIndex) {
+                    $sequentialIndex++;
+                } else {
+                    ErrorMessages::addFieldError(
+                        ErrorMessages::SEQUENCE_KEYS,
+                        $basePath,
+                        $elementName,
+                        $property,
+                        $element,
+                        $errors
+                    );
+
+                    $allValid = false;
+
+                    if ($configs->stopAtFirstError) {
+                        break;
+                    }
+
+                    continue;
+                }
             }
 
             $result = self::validateValueAgainstArms($element, $spec, $property, $configs, $errors, $basePath, $elementName);
@@ -133,10 +169,17 @@ final class ArraySpecValidator
     private static function keyMatchesArms(int|string $key, Spec $spec): bool
     {
         if ($spec->keyArms === null) {
-            return true;
+            // The list form has an implicit integer key spec
+            return is_int($key);
         }
 
         $needed = is_string($key) ? Masks::STRING : Masks::INT;
+
+        if (is_string($key) && $key === '') {
+            // PHP normalizes a null array key to the empty string, so a
+            // null key arm matches the "" key
+            $needed |= Masks::NULL;
+        }
 
         foreach ($spec->keyArms as $arm) {
             if (($arm->basicMask & $needed) !== 0) {
@@ -312,7 +355,9 @@ final class ArraySpecValidator
         }
 
         if ($name === Sequence::class) {
-            $ofValue = self::firstArgument($arguments);
+            [$ofValue, , $sequential] = self::findSequenceArguments($arguments);
+            $spec->isSequence = true;
+            $spec->requireSequential = $sequential;
             $spec->arms = self::buildValueArms($ofValue, $property, $spec);
 
             return $spec;
@@ -360,6 +405,8 @@ final class ArraySpecValidator
         }
 
         if ($object instanceof Sequence) {
+            $spec->isSequence = true;
+            $spec->requireSequential = $object->sequential;
             $spec->arms = self::buildValueArms($object->of, $property, $spec);
 
             return $spec;
@@ -438,6 +485,44 @@ final class ArraySpecValidator
         }
 
         return $arguments['of'] ?? array_values($arguments)[0] ?? null;
+    }
+
+    /**
+     * Reads the three Sequence arguments by name, falling back to
+     * positional order (of, uniqueValues, sequential).
+     *
+     * @return array{mixed, bool, bool}
+     */
+    private static function findSequenceArguments(array $arguments): array
+    {
+        $ofValue = null;
+        $uniqueValues = false;
+        $sequential = true;
+
+        $position = 0;
+
+        foreach ($arguments as $name => $value) {
+            if (is_int($name)) {
+                match ($name) {
+                    0 => $ofValue = $value,
+                    1 => $uniqueValues = (bool) $value,
+                    2 => $sequential = (bool) $value,
+                    default => null,
+                };
+
+                continue;
+            }
+
+            if (strcasecmp($name, 'of') === 0) {
+                $ofValue = $value;
+            } elseif (strcasecmp($name, 'uniqueValues') === 0) {
+                $uniqueValues = (bool) $value;
+            } elseif (strcasecmp($name, 'sequential') === 0) {
+                $sequential = (bool) $value;
+            }
+        }
+
+        return [$ofValue, $uniqueValues, $sequential];
     }
 
     /**
@@ -566,7 +651,7 @@ final class ArraySpecValidator
      */
     private static function buildBasicArm(int $typeValue, bool $isKey): Arm
     {
-        if ($typeValue <= 0 || ($typeValue & ~Masks::ALL_BITS) !== 0) {
+        if ($typeValue <= 0 || ($typeValue & ~(Masks::ALL_BITS | Masks::NULL)) !== 0) {
             throw new \ValueError(sprintf(
                 'Unsupported type value %d in an Attributes\Strictify array type attribute.',
                 $typeValue
@@ -579,8 +664,16 @@ final class ArraySpecValidator
             $mask = ($mask & ~Masks::DICT) | Masks::ARRAY;
         }
 
-        if ($isKey && ($mask & ~(Masks::INT | Masks::STRING)) !== 0) {
-            throw new \ValueError(sprintf('Dict key types must be integer or string, %d given.', $typeValue));
+        if ($isKey) {
+            if (($mask & ~(Masks::INT | Masks::STRING | Masks::FLOAT | Masks::BOOL | Masks::NULL)) !== 0) {
+                throw new \ValueError(sprintf('Dict key types must be integer, string, float, boolean or null, %d given.', $typeValue));
+            }
+
+            // PHP casts float and bool array keys to int: fold those bits
+            // into the integer bit so the arm matches the post-cast key
+            if (($mask & (Masks::FLOAT | Masks::BOOL)) !== 0) {
+                $mask = ($mask | Masks::INT) & ~(Masks::FLOAT | Masks::BOOL);
+            }
         }
 
         return new Arm(basicMask: $mask);
