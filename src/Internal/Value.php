@@ -50,6 +50,24 @@ final class Value
     }
 
     /**
+     * Renders a list of values as "a, b, c" for the constraint messages that
+     * enumerate allowed or searched values (In, Contains, StartsWith,
+     * EndsWith). Each value goes through toString().
+     *
+     * @param  list<mixed>  $values
+     */
+    public static function listString(array $values): string
+    {
+        $parts = [];
+
+        foreach ($values as $value) {
+            $parts[] = self::toString($value);
+        }
+
+        return implode(', ', $parts);
+    }
+
+    /**
      * Whether a string names a loadable class, interface or enum.
      */
     public static function isResolvableClassName(string $name): bool
