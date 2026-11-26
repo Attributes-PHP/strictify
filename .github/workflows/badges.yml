@@ -1,8 +1,9 @@
 name: Badges
 
 on:
+  # push on any branch (incl. PR branches), so feature branches get CI
+  # even where pull_request events are not delivered
   push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
