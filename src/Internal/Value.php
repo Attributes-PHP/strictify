@@ -90,7 +90,31 @@ final class Value
             return $value ? 'true' : 'false';
         }
 
-        if (is_int($value) || is_float($value)) {
+        if (is_int($value)) {
+            return (string) $value;
+        }
+
+        if (is_float($value)) {
+            // Shortest round-trip rendering (serialize_precision = -1
+            // semantics): 0.1 renders "0.1", 0.30000000000000004 keeps its
+            // full precision, and integral floats drop the fraction
+            if (is_nan($value)) {
+                return 'NAN';
+            }
+
+            if (is_infinite($value)) {
+                return $value > 0 ? 'INF' : '-INF';
+            }
+
+            // Shortest representation that round-trips
+            for ($precision = 1; $precision <= 17; $precision++) {
+                $rendered = sprintf('%.'.$precision.'G', $value);
+
+                if ((float) $rendered === $value) {
+                    return $rendered;
+                }
+            }
+
             return (string) $value;
         }
 

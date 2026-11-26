@@ -19,27 +19,33 @@ use ReflectionUnionType;
  */
 final class ErrorMessages
 {
+    /*
+     * Stable error keys, one per error type: the same camelCase string is
+     * the #[ErrorMessage] named argument and the key handed to the
+     * translator registered via ErrorTranslator::set(). The `extra` key
+     * has no owning property, so it is not an #[ErrorMessage] argument.
+     */
     public const REQUIRED = 'required';
 
     public const TYPE = 'type';
 
-    public const ALPHA_DASH = 'alpha_dash';
+    public const ALPHA_DASH = 'alphaDash';
 
-    public const ALPHA_DASH_TYPE = 'alpha_dash_type';
+    public const ALPHA_DASH_TYPE = 'alphaDashType';
 
     public const ASCII = 'ascii';
 
-    public const ASCII_TYPE = 'ascii_type';
+    public const ASCII_TYPE = 'asciiType';
 
     public const BETWEEN = 'between';
 
-    public const BETWEEN_TYPE = 'between_type';
+    public const BETWEEN_TYPE = 'betweenType';
 
     public const CONTAINS = 'contains';
 
     public const DATETIME = 'datetime';
 
-    public const ENDS_WITH = 'ends_with';
+    public const ENDS_WITH = 'endsWith';
 
     public const IN = 'in';
 
@@ -47,26 +53,81 @@ final class ErrorMessages
 
     public const MIN = 'min';
 
-    public const MULTIPLE_OF = 'multiple_of';
+    public const MULTIPLE_OF = 'multipleOf';
 
     public const REGEX = 'regex';
 
     public const SIZE = 'size';
 
-    public const STARTS_WITH = 'starts_with';
+    public const STARTS_WITH = 'startsWith';
 
     public const ULID = 'ulid';
 
     public const UUID = 'uuid';
 
+    public const EMAIL = 'email';
+
+    public const EMAIL_DOMAIN = 'emailDomain';
+
+    public const URL = 'url';
+
+    public const URL_PROTOCOL = 'urlProtocol';
+
+    public const URL_DOMAIN = 'urlDomain';
+
+    public const DOMAIN = 'domain';
+
+    public const IP = 'ip';
+
+    public const IBAN = 'iban';
+
+    public const ISBN = 'isbn';
+
+    public const CREDIT_CARD = 'creditCard';
+
+    public const VERSION = 'version';
+
+    public const MAC_ADDRESS = 'macAddress';
+
+    public const ALNUM = 'alnum';
+
+    public const ALPHA = 'alpha';
+
+    public const DIGIT = 'digit';
+
+    public const XDIGIT = 'xdigit';
+
+    public const SLUG = 'slug';
+
+    public const BASE64 = 'base64';
+
+    public const JSON = 'json';
+
+    public const HEX_RGB_COLOR = 'hexRgbColor';
+
+    public const EVEN = 'even';
+
+    public const ODD = 'odd';
+
+    public const POSITIVE = 'positive';
+
+    public const NEGATIVE = 'negative';
+
+    public const PRIME_NUMBER = 'primeNumber';
+
+    public const CONTAINS_ANY = 'containsAny';
+
     public const UNION = 'union';
 
-    public const SEQUENCE_KEYS = 'sequence_keys';
+    public const SEQUENCE_KEYS = 'sequenceKeys';
+
+    public const UNIQUE_VALUES = 'uniqueValues';
 
     public const EXTRA = 'extra';
 
     /**
-     * The error keys in ErrorMessage constructor argument position order.
+     * The error keys in ErrorMessage constructor argument position order
+     * (`extra` is discarded: extra inputs have no owning property).
      */
     private const ORDER = [
         self::REQUIRED,
@@ -89,8 +150,35 @@ final class ErrorMessages
         self::STARTS_WITH,
         self::ULID,
         self::UUID,
+        self::EMAIL,
+        self::EMAIL_DOMAIN,
+        self::URL,
+        self::URL_PROTOCOL,
+        self::URL_DOMAIN,
+        self::DOMAIN,
+        self::IP,
+        self::IBAN,
+        self::ISBN,
+        self::CREDIT_CARD,
+        self::VERSION,
+        self::MAC_ADDRESS,
+        self::ALNUM,
+        self::ALPHA,
+        self::DIGIT,
+        self::XDIGIT,
+        self::SLUG,
+        self::BASE64,
+        self::JSON,
+        self::HEX_RGB_COLOR,
+        self::EVEN,
+        self::ODD,
+        self::POSITIVE,
+        self::NEGATIVE,
+        self::PRIME_NUMBER,
+        self::CONTAINS_ANY,
         self::UNION,
         self::SEQUENCE_KEYS,
+        self::UNIQUE_VALUES,
     ];
 
     private const DEFAULTS = [
@@ -114,8 +202,35 @@ final class ErrorMessages
         self::STARTS_WITH => 'Must start with one of: {expected}',
         self::ULID => 'Must be a valid ULID',
         self::UUID => 'Must be a valid UUID',
+        self::EMAIL => 'Must be a valid email address',
+        self::EMAIL_DOMAIN => 'Must be an email address on an allowed domain: {expected}',
+        self::URL => 'Must be a valid URL',
+        self::URL_PROTOCOL => 'Must be a URL using an allowed protocol: {expected}',
+        self::URL_DOMAIN => 'Must be a URL on an allowed domain: {expected}',
+        self::DOMAIN => 'Must be a valid domain name',
+        self::IP => 'Must be a valid IP address',
+        self::IBAN => 'Must be a valid IBAN',
+        self::ISBN => 'Must be a valid ISBN',
+        self::CREDIT_CARD => 'Must be a valid credit card number',
+        self::VERSION => 'Must be a valid version string',
+        self::MAC_ADDRESS => 'Must be a valid MAC address',
+        self::ALNUM => 'Must contain only letters and numbers',
+        self::ALPHA => 'Must contain only letters',
+        self::DIGIT => 'Must contain only digits',
+        self::XDIGIT => 'Must contain only hexadecimal digits',
+        self::SLUG => 'Must be a valid slug',
+        self::BASE64 => 'Must be valid base64',
+        self::JSON => 'Must be valid JSON',
+        self::HEX_RGB_COLOR => 'Must be a valid hex RGB color',
+        self::EVEN => 'Must be an even number',
+        self::ODD => 'Must be an odd number',
+        self::POSITIVE => 'Must be a positive number',
+        self::NEGATIVE => 'Must be a negative number',
+        self::PRIME_NUMBER => 'Must be a prime number',
+        self::CONTAINS_ANY => 'Must contain at least one of: {expected}',
         self::UNION => 'Must be {expected}',
         self::SEQUENCE_KEYS => 'Must be a sequential list (keys 0, 1, 2, ...)',
+        self::UNIQUE_VALUES => 'Must contain only unique values',
         self::EXTRA => 'Extra inputs are not permitted',
     ];
 
@@ -389,7 +504,12 @@ final class ErrorMessages
             }
 
             if ($value !== null) {
-                throw new \ValueError('Only string arguments are valid for Attributes\Strictify\Fields\ErrorMessage::construct(...)');
+                throw new \TypeError(sprintf(
+                    'Attributes\\Strictify\\Fields\\ErrorMessage::__construct(): Argument #%d ($%s) must be of type string, %s given',
+                    $argumentPosition + 1,
+                    $argumentName,
+                    Value::typeName($value)
+                ));
             }
 
             break;
@@ -414,7 +534,7 @@ final class ErrorMessages
         $result = $translator($key, $message);
 
         if ($result !== null && ! is_string($result)) {
-            throw new \ValueError('The default error messages translator must return ?string');
+            throw new \TypeError('The default error messages translator must return ?string');
         }
 
         return $result ?? $message;

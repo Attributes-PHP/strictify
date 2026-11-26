@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Attributes\Strictify\Internal;
 
+use Attributes\Strictify\Exceptions\InvalidBaseModelException;
 use Attributes\Strictify\Fields\Alias;
 use ReflectionProperty;
 
@@ -23,10 +24,22 @@ final class FieldNameResolver
             $arguments = $attributes[0]->getArguments();
             $name = $arguments[0] ?? $arguments['name'] ?? null;
 
+            // The alias belongs to the model declaration: a non-string or
+            // empty name is a malformed model, not a bad call
             if (! is_string($name)) {
-                throw new \TypeError(sprintf(
-                    'Attributes\Strictify\Fields\Alias::__construct(): Argument #1 ($name) must be of type string, %s given',
+                throw new InvalidBaseModelException(sprintf(
+                    'The #[Alias] name of %s::$%s must be a string, %s given.',
+                    $property->getDeclaringClass()->getName(),
+                    $property->getName(),
                     Value::typeName($name)
+                ));
+            }
+
+            if ($name === '') {
+                throw new InvalidBaseModelException(sprintf(
+                    'The #[Alias] name of %s::$%s must not be empty.',
+                    $property->getDeclaringClass()->getName(),
+                    $property->getName()
                 ));
             }
 

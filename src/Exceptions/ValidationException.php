@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Attributes\Strictify\Exceptions;
 
-class ValidationException extends BaseException
+class ValidationException extends \Exception implements StrictifyThrowable
 {
     private array $allErrors = [];
 

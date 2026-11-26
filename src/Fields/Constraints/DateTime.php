@@ -57,7 +57,19 @@ final class DateTime implements Field
                 ? date_create_from_format($this->format, $value)
                 : date_create_from_format($this->format, $value, $this->timezoneObj);
 
-            return $parsed !== false;
+            if ($parsed === false) {
+                return false;
+            }
+
+            // A value that parses but does not describe a real date
+            // (1994-02-30, month 13, April 31) is reported by the date
+            // extension as a warning and silently rolled over into the
+            // next month: treat it as invalid. Lenient-but-real input
+            // (the unpadded 1994-1-1) produces no warning and keeps
+            // passing.
+            $lastErrors = \DateTime::getLastErrors();
+
+            return ! is_array($lastErrors) || ($lastErrors['warning_count'] ?? 0) === 0;
         }
 
         return false;

@@ -24,6 +24,12 @@ final readonly class Ulid implements Field
             if (in_array($c, self::EXCLUDED, true) || ! ctype_alnum($c)) {
                 return false;
             }
+
+            // A ULID encodes 128 bits in 26 base32 characters: the first
+            // character can only be 0-7, otherwise the value overflows
+            if ($i === 0 && $c > '7') {
+                return false;
+            }
         }
 
         return true;
