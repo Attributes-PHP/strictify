@@ -31,8 +31,8 @@
     },
     "require-dev": {
         "laravel/pint": "1.20.0",
-        "pestphp/pest": "^2.36",
-        "phpbench/phpbench": "^1.4"
+        "pestphp/pest": "^3.0",
+        "phpbench/phpbench": "^1.7"
     },
     "scripts": {
         "lint": "./vendor/bin/pint src",
