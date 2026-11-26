@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Attributes\Strictify\Internal;
 
+use Attributes\Strictify\Exceptions\InvalidBaseModelException;
 use Attributes\Strictify\ModelConfigs;
 
 /**
@@ -18,6 +19,16 @@ use Attributes\Strictify\ModelConfigs;
 final class ResolvedConfigs
 {
     private static array $cache = [];
+
+    private const ARGUMENT_NAMES = [
+        'aliasGenerator',
+        'strToLower',
+        'strToUpper',
+        'stripWhitespace',
+        'extra',
+        'strict',
+        'stopAtFirstError',
+    ];
 
     private function __construct(
         public readonly ?string $aliasGenerator,
@@ -63,50 +74,84 @@ final class ResolvedConfigs
         if ($attribute !== null) {
             foreach ($attribute->getArguments() as $name => $value) {
                 $index = is_int($name) ? $name : self::argumentIndex($name);
+                $argumentNumber = $index + 1;
+                $argumentName = self::ARGUMENT_NAMES[$index];
 
                 switch ($index) {
                     case 0: // aliasGenerator
-                        if (is_string($value)) {
-                            if (! in_array(strtolower($value), ['pascal', 'camel', 'snake', 'kebab'], true)) {
-                                throw new \ValueError('Attributes\Strictify\ModelConfigs::__construct(): Argument #1 must be of one of the following options: pascal, camel, snake, kebab');
-                            }
-
-                            $generator = strtolower($value);
+                        if ($value === null) {
+                            break;
                         }
 
-                        break;
-                    case 1: // strToLower
-                        $strToLower = $value === true;
+                        if (! is_string($value)) {
+                            throw new InvalidBaseModelException(sprintf(
+                                'Attributes\\Strictify\\ModelConfigs::__construct(): Argument #%d ($%s) must be of type ?string, %s given',
+                                $argumentNumber,
+                                $argumentName,
+                                Value::typeName($value)
+                            ));
+                        }
 
-                        break;
-                    case 2: // strToUpper
-                        $strToUpper = $value === true;
+                        if (! in_array(strtolower($value), ['pascal', 'camel', 'snake', 'kebab'], true)) {
+                            throw new InvalidBaseModelException('Attributes\\Strictify\\ModelConfigs::__construct(): Argument #1 must be of one of the following options: pascal, camel, snake, kebab');
+                        }
 
-                        break;
-                    case 3: // stripWhitespace
-                        $stripWhitespace = $value === true;
+                        $generator = strtolower($value);
 
                         break;
                     case 4: // extra
-                        if (is_string($value)) {
-                            if (! in_array(strtolower($value), ['ignore', 'forbid', 'allow'], true)) {
-                                throw new \ValueError('Attributes\Strictify\ModelConfigs::__construct(): Argument #5 must be of one of the following options: ignore, forbid, allow');
-                            }
-
-                            $extra = strtolower($value);
+                        if ($value === null) {
+                            break;
                         }
 
-                        break;
-                    case 5: // strict
-                        $strict = $value === true;
+                        if (! is_string($value)) {
+                            throw new InvalidBaseModelException(sprintf(
+                                'Attributes\\Strictify\\ModelConfigs::__construct(): Argument #%d ($%s) must be of type ?string, %s given',
+                                $argumentNumber,
+                                $argumentName,
+                                Value::typeName($value)
+                            ));
+                        }
+
+                        if (! in_array(strtolower($value), ['ignore', 'forbid', 'allow'], true)) {
+                            throw new InvalidBaseModelException('Attributes\\Strictify\\ModelConfigs::__construct(): Argument #5 must be of one of the following options: ignore, forbid, allow');
+                        }
+
+                        $extra = strtolower($value);
 
                         break;
-                    case 6: // stopAtFirstError
-                        $stopAtFirstError = $value === true;
+                    default: // strToLower, strToUpper, stripWhitespace, strict, stopAtFirstError
+                        if (! is_bool($value)) {
+                            throw new InvalidBaseModelException(sprintf(
+                                'Attributes\\Strictify\\ModelConfigs::__construct(): Argument #%d ($%s) must be of type bool, %s given',
+                                $argumentNumber,
+                                $argumentName,
+                                Value::typeName($value)
+                            ));
+                        }
 
-                        break;
-                    default:
-                        throw new \Error("Unknown named parameter \${$name}");
+                        switch ($index) {
+                            case 1:
+                                $strToLower = $value;
+
+                                break;
+                            case 2:
+                                $strToUpper = $value;
+
+                                break;
+                            case 3:
+                                $stripWhitespace = $value;
+
+                                break;
+                            case 5:
+                                $strict = $value;
+
+                                break;
+                            case 6:
+                                $stopAtFirstError = $value;
+
+                                break;
+                        }
                 }
             }
         }

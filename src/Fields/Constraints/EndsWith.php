@@ -46,4 +46,23 @@ final readonly class EndsWith implements Field
     {
         return [ErrorMessages::ENDS_WITH, Value::listString($this->values)];
     }
+
+    /**
+     * The compile-time argument rules: an empty list fails every input,
+     * and an empty suffix matches every value.
+     */
+    public function argError(): ?string
+    {
+        if ($this->values === []) {
+            return 'at least one suffix must be declared.';
+        }
+
+        foreach ($this->values as $suffix) {
+            if ($suffix === '') {
+                return 'an empty string matches every value: declare only non-empty values.';
+            }
+        }
+
+        return null;
+    }
 }

@@ -7,22 +7,46 @@ namespace Attributes\Strictify\Internal;
 use Attributes\Strictify\Exceptions\InvalidBaseModelException;
 use Attributes\Strictify\Fields\ConfigAwareConstraint;
 use Attributes\Strictify\Fields\Constraint;
+use Attributes\Strictify\Fields\Constraints\Alnum;
+use Attributes\Strictify\Fields\Constraints\Alpha;
 use Attributes\Strictify\Fields\Constraints\AlphaDash;
 use Attributes\Strictify\Fields\Constraints\Ascii;
+use Attributes\Strictify\Fields\Constraints\Base64;
 use Attributes\Strictify\Fields\Constraints\Between;
 use Attributes\Strictify\Fields\Constraints\Contains;
+use Attributes\Strictify\Fields\Constraints\ContainsAny;
+use Attributes\Strictify\Fields\Constraints\CreditCard;
 use Attributes\Strictify\Fields\Constraints\DateTime;
+use Attributes\Strictify\Fields\Constraints\Digit;
+use Attributes\Strictify\Fields\Constraints\Domain;
+use Attributes\Strictify\Fields\Constraints\Email;
 use Attributes\Strictify\Fields\Constraints\EndsWith;
+use Attributes\Strictify\Fields\Constraints\Even;
+use Attributes\Strictify\Fields\Constraints\HexRgbColor;
+use Attributes\Strictify\Fields\Constraints\Iban;
 use Attributes\Strictify\Fields\Constraints\In;
+use Attributes\Strictify\Fields\Constraints\Ip;
+use Attributes\Strictify\Fields\Constraints\Isbn;
+use Attributes\Strictify\Fields\Constraints\Json;
+use Attributes\Strictify\Fields\Constraints\MacAddress;
 use Attributes\Strictify\Fields\Constraints\Max;
 use Attributes\Strictify\Fields\Constraints\Min;
 use Attributes\Strictify\Fields\Constraints\MultipleOf;
+use Attributes\Strictify\Fields\Constraints\Negative;
+use Attributes\Strictify\Fields\Constraints\Odd;
+use Attributes\Strictify\Fields\Constraints\Positive;
+use Attributes\Strictify\Fields\Constraints\PrimeNumber;
 use Attributes\Strictify\Fields\Constraints\Regex;
 use Attributes\Strictify\Fields\Constraints\Size;
+use Attributes\Strictify\Fields\Constraints\Slug;
 use Attributes\Strictify\Fields\Constraints\StartsWith;
 use Attributes\Strictify\Fields\Constraints\Ulid;
+use Attributes\Strictify\Fields\Constraints\Url;
 use Attributes\Strictify\Fields\Constraints\Uuid;
+use Attributes\Strictify\Fields\Constraints\Version;
+use Attributes\Strictify\Fields\Constraints\Xdigit;
 use Attributes\Strictify\Fields\Dict;
+use Attributes\Strictify\Fields\Intersection;
 use Attributes\Strictify\Fields\Sequence;
 use Attributes\Strictify\Fields\Union;
 use Attributes\Strictify\Type;
@@ -59,6 +83,29 @@ final class Constraints
         StartsWith::class,
         Ulid::class,
         Uuid::class,
+        Email::class,
+        Url::class,
+        Domain::class,
+        Ip::class,
+        Iban::class,
+        Isbn::class,
+        CreditCard::class,
+        Version::class,
+        MacAddress::class,
+        Alnum::class,
+        Alpha::class,
+        Digit::class,
+        Xdigit::class,
+        Slug::class,
+        Base64::class,
+        Json::class,
+        HexRgbColor::class,
+        Even::class,
+        Odd::class,
+        Positive::class,
+        Negative::class,
+        PrimeNumber::class,
+        ContainsAny::class,
     ];
 
     /**
@@ -95,7 +142,7 @@ final class Constraints
             $name = $attribute->getName();
 
             if (in_array($name, self::BUILTIN, true) || $name === Union::class) {
-                $constraints[] = $attribute->newInstance();
+                $constraints[] = self::instantiateBuiltin($attribute, $property);
 
                 continue;
             }
@@ -108,6 +155,40 @@ final class Constraints
         }
 
         return self::$constraintCache[$cacheKey] = $constraints;
+    }
+
+    /**
+     * Instantiates a built-in constraint attribute once per field compile.
+     * A rejected constructor argument belongs to the model declaration, so
+     * the engine TypeError/ValueError is rewritten into
+     * InvalidBaseModelException; afterwards the constraint's own argument
+     * rules reject the arguments that would make it unsatisfiable or a
+     * no-op (inverted or NAN bounds, empty value lists, a pattern that
+     * does not compile, an empty domain list).
+     */
+    private static function instantiateBuiltin(ReflectionAttribute $attribute, ReflectionProperty $property): object
+    {
+        try {
+            $instance = $attribute->newInstance();
+        } catch (\TypeError|\ValueError $e) {
+            throw new InvalidBaseModelException($e->getMessage(), 0, $e);
+        }
+
+        if (method_exists($instance, 'argError')) {
+            $reason = $instance->argError();
+
+            if ($reason !== null) {
+                throw new InvalidBaseModelException(sprintf(
+                    'Attribute "%s" on %s::$%s: %s',
+                    $attribute->getName(),
+                    $property->getDeclaringClass()->getName(),
+                    $property->getName(),
+                    $reason
+                ));
+            }
+        }
+
+        return $instance;
     }
 
     /**
@@ -159,9 +240,9 @@ final class Constraints
         foreach ($property->getAttributes() as $attribute) {
             $name = $attribute->getName();
 
-            if (($name === Sequence::class || $name === Dict::class) && ! $arrayLike) {
+            if (($name === Sequence::class || $name === Dict::class || $name === Intersection::class) && ! $arrayLike) {
                 throw new InvalidBaseModelException(sprintf(
-                    'Sequence/Dict can only be declared on array-like properties (array, a union containing array, mixed or untyped); property %s::$%s is not array-like.',
+                    'Sequence/Dict/Intersection can only be declared on array-like properties (array, a union containing array, mixed or untyped); property %s::$%s is not array-like.',
                     $property->getDeclaringClass()->getName(),
                     $property->getName()
                 ));
@@ -204,6 +285,14 @@ final class Constraints
         ResolvedConfigs $configs,
         array &$errors,
     ): bool {
+        // null is not a constrained value: a nullable property accepts it
+        // (the type check already passed it), exactly like a missing key
+        // backed by a null default. Running the constraints on null would
+        // make ?T properties impossible to leave empty.
+        if ($value === null) {
+            return true;
+        }
+
         if ($constraint instanceof Union) {
             if ($constraint->validateScalar($value)) {
                 return true;

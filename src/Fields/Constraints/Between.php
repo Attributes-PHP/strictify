@@ -38,4 +38,27 @@ final readonly class Between implements Field
 
         return [(is_int($value) || is_float($value)) ? ErrorMessages::BETWEEN : ErrorMessages::BETWEEN_TYPE, $expected];
     }
+
+    /**
+     * The compile-time argument rules: a NAN bound compares false against
+     * everything, and inverted bounds make the constraint unsatisfiable.
+     */
+    public function argError(): ?string
+    {
+        foreach (['min' => $this->min, 'max' => $this->max] as $argument => $bound) {
+            if (is_float($bound) && is_nan($bound)) {
+                return sprintf('$%s must be a number, NAN given.', $argument);
+            }
+        }
+
+        if ((float) $this->min > (float) $this->max) {
+            return sprintf(
+                '$min (%s) must be less than or equal to $max (%s).',
+                Value::toString($this->min),
+                Value::toString($this->max)
+            );
+        }
+
+        return null;
+    }
 }

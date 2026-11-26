@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Attributes\Strictify\Internal;
 
 use Attributes\Strictify\BaseModel;
+use Attributes\Strictify\Exceptions\InvalidBaseModelException;
 use Attributes\Strictify\Fields\Dict;
 use Attributes\Strictify\Fields\Intersection;
 use Attributes\Strictify\Fields\Sequence;
@@ -62,6 +63,26 @@ final class ArraySpecValidator
      * the given spec.
      */
     private static function validateArrayElements(
+        array &$value,
+        Spec $spec,
+        ReflectionProperty $property,
+        ResolvedConfigs $configs,
+        array &$errors,
+        ?string $parentPath,
+        string $fieldName,
+    ): bool {
+        // Nested array shapes re-enter here; past the depth limit the run
+        // stops with a catchable exception instead of exhausting the stack
+        DepthGuard::enter();
+
+        try {
+            return self::validateArrayElementsBody($value, $spec, $property, $configs, $errors, $parentPath, $fieldName);
+        } finally {
+            DepthGuard::leave();
+        }
+    }
+
+    private static function validateArrayElementsBody(
         array &$value,
         Spec $spec,
         ReflectionProperty $property,
@@ -160,7 +181,50 @@ final class ArraySpecValidator
             }
         }
 
+        // Duplicate elements (uniqueValues: true) are reported on the
+        // array property, after coercion, so loose-mode values that
+        // coerce to the same element collide too
+        if ($allValid && $spec->requireUnique && self::hasDuplicateValues($value)) {
+            ErrorMessages::addFieldError(ErrorMessages::UNIQUE_VALUES, $parentPath, $fieldName, $property, $value, $errors);
+            $allValid = false;
+        }
+
+        // A #[Sequence] sorts its values in place (renumbering the keys)
+        // once the whole array validated, so the model receives the
+        // values in the requested order
+        if ($allValid && $spec->isSequence && $spec->sort !== null) {
+            if ($spec->sort === 'asc') {
+                sort($value, SORT_REGULAR);
+            } else {
+                rsort($value, SORT_REGULAR);
+            }
+        }
+
         return $allValid;
+    }
+
+    /**
+     * Whether the array holds the same value twice (strict comparison).
+     */
+    private static function hasDuplicateValues(array $value): bool
+    {
+        if (count($value) < 2) {
+            return false;
+        }
+
+        $seen = [];
+
+        foreach ($value as $element) {
+            foreach ($seen as $other) {
+                if ($element === $other) {
+                    return true;
+                }
+            }
+
+            $seen[] = $element;
+        }
+
+        return false;
     }
 
     /**
@@ -318,7 +382,15 @@ final class ArraySpecValidator
             return self::$specCache[$cacheKey] = null;
         }
 
-        return self::$specCache[$cacheKey] = self::buildSpecFromAttribute($attribute, $property);
+        // Attribute arguments belong to the model declaration: a rejected
+        // argument (an engine TypeError from a nested attribute constructor,
+        // a ValueError from an argument rule) surfaces as
+        // InvalidBaseModelException, not as a bad call
+        try {
+            return self::$specCache[$cacheKey] = self::buildSpecFromAttribute($attribute, $property);
+        } catch (\TypeError|\ValueError $e) {
+            throw new InvalidBaseModelException($e->getMessage(), 0, $e);
+        }
     }
 
     /**
@@ -346,18 +418,21 @@ final class ArraySpecValidator
         $arguments = $attribute->getArguments();
 
         if ($name === Dict::class) {
-            [$keyValue, $ofValue] = self::findDictArguments($arguments, $property);
+            [$keyValue, $ofValue, $uniqueValues] = self::findDictArguments($arguments, $property);
 
             $spec->keyArms = self::buildKeyArms($keyValue, $property);
             $spec->arms = self::buildValueArms($ofValue, $property, $spec);
+            $spec->requireUnique = $uniqueValues;
 
             return $spec;
         }
 
         if ($name === Sequence::class) {
-            [$ofValue, , $sequential] = self::findSequenceArguments($arguments);
+            [$ofValue, $uniqueValues, $sequential, $sorted] = self::findSequenceArguments($arguments, $property);
             $spec->isSequence = true;
             $spec->requireSequential = $sequential;
+            $spec->requireUnique = $uniqueValues;
+            $spec->sort = $sorted === null ? null : strtolower($sorted);
             $spec->arms = self::buildValueArms($ofValue, $property, $spec);
 
             return $spec;
@@ -400,6 +475,7 @@ final class ArraySpecValidator
         if ($object instanceof Dict) {
             $spec->keyArms = self::buildKeyArms($object->key, $property);
             $spec->arms = self::buildValueArms($object->of, $property, $spec);
+            $spec->requireUnique = $object->uniqueValues;
 
             return $spec;
         }
@@ -407,6 +483,8 @@ final class ArraySpecValidator
         if ($object instanceof Sequence) {
             $spec->isSequence = true;
             $spec->requireSequential = $object->sequential;
+            $spec->requireUnique = $object->uniqueValues;
+            $spec->sort = $object->sorted === null ? null : strtolower($object->sorted);
             $spec->arms = self::buildValueArms($object->of, $property, $spec);
 
             return $spec;
@@ -437,6 +515,7 @@ final class ArraySpecValidator
     {
         $keyValue = null;
         $ofValue = null;
+        $uniqueValues = false;
         $keyIndex = null;
         $ofIndex = null;
 
@@ -448,6 +527,8 @@ final class ArraySpecValidator
                 } elseif ($ofIndex === null) {
                     $ofIndex = $name;
                     $ofValue = $value;
+                } elseif ($name === 2) {
+                    $uniqueValues = (bool) $value;
                 }
 
                 continue;
@@ -459,6 +540,8 @@ final class ArraySpecValidator
             } elseif (strcasecmp($name, 'of') === 0 && $ofIndex === null) {
                 $ofIndex = -1;
                 $ofValue = $value;
+            } elseif (strcasecmp($name, 'uniqueValues') === 0) {
+                $uniqueValues = (bool) $value;
             }
         }
 
@@ -470,7 +553,7 @@ final class ArraySpecValidator
             ));
         }
 
-        return [$keyValue, $ofValue];
+        return [$keyValue, $ofValue, $uniqueValues];
     }
 
     /**
@@ -488,18 +571,17 @@ final class ArraySpecValidator
     }
 
     /**
-     * Reads the three Sequence arguments by name, falling back to
-     * positional order (of, uniqueValues, sequential).
+     * Reads the four Sequence arguments by name, falling back to
+     * positional order (of, uniqueValues, sequential, sorted).
      *
-     * @return array{mixed, bool, bool}
+     * @return array{mixed, bool, bool, string|null}
      */
-    private static function findSequenceArguments(array $arguments): array
+    private static function findSequenceArguments(array $arguments, ReflectionProperty $property): array
     {
         $ofValue = null;
         $uniqueValues = false;
         $sequential = true;
-
-        $position = 0;
+        $sorted = null;
 
         foreach ($arguments as $name => $value) {
             if (is_int($name)) {
@@ -507,6 +589,7 @@ final class ArraySpecValidator
                     0 => $ofValue = $value,
                     1 => $uniqueValues = (bool) $value,
                     2 => $sequential = (bool) $value,
+                    3 => $sorted = $value,
                     default => null,
                 };
 
@@ -519,10 +602,25 @@ final class ArraySpecValidator
                 $uniqueValues = (bool) $value;
             } elseif (strcasecmp($name, 'sequential') === 0) {
                 $sequential = (bool) $value;
+            } elseif (strcasecmp($name, 'sorted') === 0) {
+                $sorted = $value;
             }
         }
 
-        return [$ofValue, $uniqueValues, $sequential];
+        // A $sorted value the constructor would reject must not be
+        // silently ignored when read from a declaration
+        if ($sorted !== null && ! is_string($sorted)
+            || (is_string($sorted) && ! in_array(strtolower($sorted), ['asc', 'desc'], true))) {
+            throw new \ValueError(sprintf(
+                'Attribute "%s" for property "%s" of class "%s" must declare $sorted as "asc", "ASC", "desc", "DESC" or null, %s given.',
+                strtolower(Sequence::class),
+                $property->getName(),
+                $property->getDeclaringClass()->getName(),
+                is_string($sorted) ? $sorted : Value::typeName($sorted)
+            ));
+        }
+
+        return [$ofValue, $uniqueValues, $sequential, $sorted];
     }
 
     /**

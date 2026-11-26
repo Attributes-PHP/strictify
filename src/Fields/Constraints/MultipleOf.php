@@ -35,8 +35,11 @@ final readonly class MultipleOf implements Field
         $number = (float) $value;
         $divisor = (float) $bound;
 
-        if ($divisor == 0.0 && $number != 0.0) {
-            return false;
+        // A zero divisor has exactly one multiple, 0, for int and float
+        // alike; fmod() would yield NAN for every pair and reject 0.0
+        // itself
+        if ($divisor == 0.0) {
+            return $number == 0.0;
         }
 
         $remainder = fmod($number, $divisor);
@@ -54,5 +57,19 @@ final readonly class MultipleOf implements Field
     public function error(mixed $value): array
     {
         return [ErrorMessages::MULTIPLE_OF, Value::toString($this->value)];
+    }
+
+    /**
+     * The compile-time argument rule: every comparison against NAN is
+     * false, so a NAN bound would silently turn the constraint into an
+     * always-fail (or always-pass) rule.
+     */
+    public function argError(): ?string
+    {
+        if (is_float($this->value) && is_nan($this->value)) {
+            return '$value must be a number, NAN given.';
+        }
+
+        return null;
     }
 }

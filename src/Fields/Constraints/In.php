@@ -39,4 +39,13 @@ final readonly class In implements Field
     {
         return [ErrorMessages::IN, Value::listString($this->values)];
     }
+
+    /**
+     * The compile-time argument rule: an empty list makes the constraint
+     * fail every input.
+     */
+    public function argError(): ?string
+    {
+        return $this->values === [] ? 'at least one value must be declared.' : null;
+    }
 }
