@@ -8,7 +8,7 @@ use Attributes\Strictify\Internal\Value;
 use Attributes\Strictify\Type;
 
 #[\Attribute(\Attribute::TARGET_PROPERTY | \Attribute::TARGET_PARAMETER)]
-final class Sequence implements Field
+readonly class Sequence implements Field
 {
     public mixed $of;
 
@@ -16,8 +16,15 @@ final class Sequence implements Field
 
     public bool $sequential;
 
-    public function __construct(mixed $of, bool $uniqueValues = false, bool $sequential = true)
-    {
+    /** 'asc', 'ASC', 'desc', 'DESC' to sort the validated values, or null to keep the input order */
+    public ?string $sorted;
+
+    public function __construct(
+        mixed $of,
+        bool $uniqueValues = false,
+        bool $sequential = true,
+        ?string $sorted = null,
+    ) {
         if (! (is_int($of) || is_string($of) || $of instanceof Type
             || $of instanceof Sequence || $of instanceof Union || $of instanceof Intersection || $of instanceof Dict)) {
             throw new \TypeError(sprintf(
@@ -33,8 +40,16 @@ final class Sequence implements Field
             ));
         }
 
+        if ($sorted !== null && ! in_array(strtolower($sorted), ['asc', 'desc'], true)) {
+            throw new \ValueError(sprintf(
+                'Sequence::__construct(): Argument #4 ($sorted) must be "asc", "ASC", "desc", "DESC" or null, "%s" given',
+                $sorted
+            ));
+        }
+
         $this->of = $of;
         $this->uniqueValues = $uniqueValues;
         $this->sequential = $sequential;
+        $this->sorted = $sorted;
     }
 }

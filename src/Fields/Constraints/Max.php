@@ -33,4 +33,17 @@ final readonly class Max implements Field
     {
         return [ErrorMessages::MAX, Value::toString($this->value)];
     }
+
+    /**
+     * The compile-time argument rule: a NAN bound would make the
+     * constraint silently pass every value.
+     */
+    public function argError(): ?string
+    {
+        if (is_float($this->value) && is_nan($this->value)) {
+            return '$value must be a number, NAN given.';
+        }
+
+        return null;
+    }
 }

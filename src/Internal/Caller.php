@@ -6,6 +6,7 @@ namespace Attributes\Strictify\Internal;
 
 use ArrayAccess;
 use Attributes\Strictify\BaseModel;
+use Attributes\Strictify\Exceptions\CallException;
 use ReflectionClass;
 use ReflectionFunction;
 use ReflectionFunctionAbstract;
@@ -59,16 +60,17 @@ final class Caller
             }
 
             // A #[\SensitiveParameter] parameter is reported positionally:
-            // the named message would disclose the parameter name
-            if ($isInternal || self::isSensitiveParameter($parameter)) {
-                throw new \Error(sprintf(
+            // the named message would disclose the parameter name.
+            // Internal functions name their parameters too.
+            if (self::isSensitiveParameter($parameter)) {
+                throw new CallException(sprintf(
                     'No value provided for parameter %d of %s().',
                     $parameter->getPosition() + 1,
                     $reflection->getName()
                 ));
             }
 
-            throw new \Error(sprintf(
+            throw new CallException(sprintf(
                 'No value provided for parameter $%s of %s().',
                 $parameter->getName(),
                 $reflection->getName()

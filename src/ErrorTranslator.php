@@ -29,7 +29,7 @@ final class ErrorTranslator
     public static function set(mixed $translator): void
     {
         if (! is_callable($translator)) {
-            throw new \TypeError('Argument 1 passed to Attributes\\Strictify\\ErrorTranslator::set() must be callable');
+            throw new \TypeError('Argument 1 passed to Attributes\\Strictify\\ErrorTranslator::set() must be a valid callback, no array or string given');
         }
 
         self::$translator = $translator;

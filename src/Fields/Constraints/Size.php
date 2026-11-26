@@ -56,6 +56,30 @@ final readonly class Size implements Field
     }
 
     /**
+     * The compile-time argument rules: negative sizes are meaningless and
+     * inverted bounds make the constraint unsatisfiable.
+     */
+    public function argError(): ?string
+    {
+        $hasMin = $this->min !== null;
+        $hasMax = $this->max !== null;
+
+        if ($hasMin && $this->min < 0) {
+            return sprintf('$min must not be negative, %d given.', $this->min);
+        }
+
+        if ($hasMax && $this->max < 0) {
+            return sprintf('$max must not be negative, %d given.', $this->max);
+        }
+
+        if ($hasMin && $hasMax && $this->min > $this->max) {
+            return sprintf('$min (%d) must be less than or equal to $max (%d).', $this->min, $this->max);
+        }
+
+        return null;
+    }
+
+    /**
      * Renders the {expected} part of the size error.
      */
     private function sizeExpected(): string

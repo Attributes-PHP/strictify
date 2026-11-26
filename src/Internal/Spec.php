@@ -34,6 +34,17 @@ final class Spec
     public bool $requireSequential = false;
 
     /**
+     * Sequence and Dict: elements must not repeat (uniqueValues: true).
+     */
+    public bool $requireUnique = false;
+
+    /**
+     * Sequence only: the order the validated values are put in ('asc' or
+     * 'desc'), or null to keep the input order.
+     */
+    public ?string $sort = null;
+
+    /**
      * The rendered expected-type strings of the value and key arms,
      * computed lazily for repeated element errors.
      */

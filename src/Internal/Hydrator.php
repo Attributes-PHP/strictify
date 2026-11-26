@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Attributes\Strictify\Internal;
 
 use Attributes\Strictify\BaseModel;
+use Attributes\Strictify\Exceptions\InvalidBaseModelException;
 use Attributes\Strictify\Exceptions\ValidationException;
 use ReflectionClass;
 use ReflectionMethod;
@@ -76,6 +77,24 @@ final class Hydrator
      * empty.
      */
     public static function validateModel(
+        array $rawData,
+        BaseModel $model,
+        ResolvedConfigs $configs,
+        array &$errors,
+        ?string $parentPath,
+    ): bool {
+        // Nested models re-enter here; past the depth limit the run stops
+        // with a catchable exception instead of exhausting the stack
+        DepthGuard::enter();
+
+        try {
+            return self::validateModelBody($rawData, $model, $configs, $errors, $parentPath);
+        } finally {
+            DepthGuard::leave();
+        }
+    }
+
+    private static function validateModelBody(
         array $rawData,
         BaseModel $model,
         ResolvedConfigs $configs,
@@ -173,6 +192,7 @@ final class Hydrator
         }
 
         $entries = [];
+        $seenFieldNames = [];
 
         for ($current = $class; $current !== false && $current !== BaseModel::class; $current = get_parent_class($current)) {
             $reflection = new ReflectionClass($current);
@@ -190,10 +210,32 @@ final class Hydrator
 
                 Constraints::checkPlacement($property, $plan);
 
+                $fieldName = FieldNameResolver::resolve($property, $generator);
+
+                // Two properties resolving to the same input key would both
+                // be hydrated from that one key (and one of them would keep
+                // its default), which is never what the model means: an
+                // #[Alias] naming another property, or an alias generator
+                // mapping two names to the same key
+                if (isset($seenFieldNames[$fieldName])) {
+                    $sibling = $seenFieldNames[$fieldName];
+
+                    throw new InvalidBaseModelException(sprintf(
+                        'Properties %s::$%s and %s::$%s both resolve to the input key "%s".',
+                        $sibling['class'],
+                        $sibling['name'],
+                        $property->getDeclaringClass()->getName(),
+                        $property->getName(),
+                        $fieldName
+                    ));
+                }
+
+                $seenFieldNames[$fieldName] = ['class' => $property->getDeclaringClass()->getName(), 'name' => $property->getName()];
+
                 $entries[] = [
                     'property' => $property,
                     'name' => $property->getName(),
-                    'fieldName' => FieldNameResolver::resolve($property, $generator),
+                    'fieldName' => $fieldName,
                     'hasDefault' => $property->hasDefaultValue(),
                     'sensitive' => ErrorMessages::isSensitive($property),
                     'plan' => $plan,
