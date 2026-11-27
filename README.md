@@ -61,6 +61,12 @@ call("myFunction", $rawData);
 composer require attributes-php/strictify
 ```
 
+For maximum speed, install [Strictify Extension](https://github.com/Attributes-PHP/strictify-ext) instead — the native C extension flavor of the same library. It shares the same API, behavior and documentation, so no code changes are needed:
+
+```bash
+pie install attributes-php/strictify-ext
+```
+
 ## Documentation
 
 Full documentation lives at [strictify.attributes-php.com](https://strictify.attributes-php.com):
