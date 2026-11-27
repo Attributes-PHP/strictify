@@ -30,14 +30,18 @@
         ]
     },
     "require-dev": {
-        "laravel/pint": "1.20.0",
         "pestphp/pest": "^3.0",
-        "phpbench/phpbench": "^1.7"
+        "carthage-software/mago": "^1.50.0",
+        "phpbench/phpbench": "^1.7",
+        "symfony/validator": "^7.4 || ^8.0",
+        "respect/validation": "^2.5 || ^3.0",
+        "illuminate/validation": "^12.0 || ^13.0",
+        "illuminate/translation": "^12.0 || ^13.0"
     },
     "scripts": {
-        "lint": "./vendor/bin/pint src",
+        "lint": "./vendor/bin/mago format",
         "benchmark": "./vendor/bin/phpbench run tests/Benchmark --report=aggregate",
-        "test:lint": "./vendor/bin/pint --test src",
+        "test:lint": "./vendor/bin/mago format --check",
         "test:coverage": "./vendor/bin/pest --coverage --parallel",
         "test": [
             "@test:lint",
