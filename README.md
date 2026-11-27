@@ -3,6 +3,7 @@
 <p align="center">
     <a href="https://codecov.io/gh/Attributes-PHP/strictify"><img src="https://codecov.io/gh/Attributes-PHP/strictify/graph/badge.svg?token=9W2JHIDQ2V"/></a>
     <a href="https://packagist.org/packages/Attributes-PHP/strictify"><img alt="Latest Version" src="https://img.shields.io/packagist/v/Attributes-PHP/strictify"></a>
+    <a href="https://packagist.org/packages/Attributes-PHP/strictify-ext"><img alt="Static Badge" src="https://img.shields.io/badge/PHP-8.2%2B-blue?logo=php"></a>
     <a href="https://packagist.org/packages/Attributes-PHP/strictify"><img alt="Software License" src="https://img.shields.io/packagist/l/Attributes-PHP/strictify"></a>
 </p>
 
