@@ -17,8 +17,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # the lowest supported version: if it passes on 8.2 it passes on newer
-        php: [ '8.2' ]
+        # the lowest supported version: if it passes on 8.3 it passes on newer
+        php: [ '8.3' ]
 
     name: PHP ${{ matrix.php }}
 
